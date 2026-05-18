@@ -19,8 +19,7 @@ export async function POST(req: Request) {
 
   // Check client in Supabase
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  const supabaseKey = serviceKey && !serviceKey.startsWith("your_") ? serviceKey : null
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (supabaseUrl?.startsWith("http") && supabaseKey) {
     try {

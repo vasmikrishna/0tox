@@ -12,15 +12,10 @@ export async function POST(req: Request) {
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  const supabaseKey = serviceKey && !serviceKey.startsWith("your_") ? serviceKey : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl?.startsWith("http") || !supabaseKey) {
     return NextResponse.json({ error: "Database not configured" }, { status: 503 })
-  }
-
-  if (!serviceKey || serviceKey.startsWith("your_")) {
-    return NextResponse.json({ error: "Registration is not available yet — service not fully configured" }, { status: 503 })
   }
 
   try {
@@ -43,11 +38,9 @@ export async function POST(req: Request) {
       .single()
 
     if (error || !user) {
-      console.error("[register] Supabase error:", error)
-      const msg = error?.message?.includes("does not exist")
-        ? "Database tables not set up yet — please run the SQL schema in Supabase"
-        : error?.message?.includes("permission") || error?.code === "42501"
-        ? "Database permission error — service role key required"
+      console.error("[register] Supabase error:", error?.message, error?.code, error?.details)
+      const msg = error?.code === "42P01"
+        ? "Database tables not set up — run the SQL schema in Supabase"
         : "Failed to create account"
       return NextResponse.json({ error: msg }, { status: 500 })
     }
