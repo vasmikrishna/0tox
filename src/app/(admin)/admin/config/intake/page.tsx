@@ -10,7 +10,16 @@ import { defaultStageTemplatesFor, DEFAULT_SERVICE_TIERS } from "@/lib/stage-tem
 import { Plus, GripVertical, Eye, EyeOff, Trash2 } from "lucide-react"
 import type { IntakeQuestion, Service, ServiceTier, StageTemplate } from "@/types"
 
-const TYPES = ["text", "textarea", "select", "checkbox", "file"] as const
+const TYPES = ["text", "textarea", "select", "checkbox", "file", "industry"] as const
+
+const TYPE_LABELS: Record<string, string> = {
+  text: "Short text",
+  textarea: "Long text",
+  select: "Dropdown (custom options)",
+  checkbox: "Checkbox",
+  file: "File upload",
+  industry: "Industry (built-in list)",
+}
 const DEFAULT_SERVICES: Service[] = [
   { id: "starter", tier: "starter", name: "Starter", tagline: "Your first step online", description: "Clean starter website", price_label: "Custom pricing", features: [], active: true },
   { id: "standard", tier: "standard", name: "Standard", tagline: "A site that works harder", description: "Advanced website", price_label: "Custom pricing", features: [], active: true },
@@ -345,7 +354,7 @@ export default function IntakeConfigPage() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium">{q.label}</p>
                 <div className="flex gap-1.5 mt-0.5">
-                  <Badge variant="outline" className="text-xs">{q.type}</Badge>
+                  <Badge variant="outline" className="text-xs">{TYPE_LABELS[q.type] ?? q.type}</Badge>
                   {q.required && <Badge variant="default" className="text-xs">Required</Badge>}
                 </div>
               </div>
@@ -368,7 +377,7 @@ export default function IntakeConfigPage() {
                   <Label>Type</Label>
                   <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value as IntakeQuestion["type"] }))}
                     className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-background">
-                    {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                    {TYPES.map(t => <option key={t} value={t}>{TYPE_LABELS[t] ?? t}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1.5">
@@ -382,6 +391,11 @@ export default function IntakeConfigPage() {
               </div>
               {form.type === "select" && (
                 <div className="space-y-1.5"><Label>Options (comma-separated)</Label><Input value={form.options} onChange={e => setForm(p => ({ ...p, options: e.target.value }))} placeholder="Option 1, Option 2, Option 3" /></div>
+              )}
+              {form.type === "industry" && (
+                <p className="text-xs text-muted-foreground bg-muted/50 rounded px-3 py-2 border border-border">
+                  Uses the built-in list of 35+ Australian industries (Accounting, Construction, Hospitality, Retail, etc). No options needed — the client sees a searchable dropdown.
+                </p>
               )}
               <div className="flex gap-2">
                 <Button size="sm" onClick={addQuestion} disabled={!form.label}>Add</Button>

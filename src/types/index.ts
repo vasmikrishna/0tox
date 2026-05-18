@@ -5,7 +5,7 @@ export type ProjectStatus = "intake" | "review" | "active" | "completed" | "canc
 export type StageStatus = "pending" | "in_progress" | "completed"
 export type PaymentStatus = "pending" | "paid" | "overdue"
 export type PaymentMethod = "stripe" | "bank_transfer" | "other"
-export type QuestionType = "text" | "textarea" | "select" | "checkbox" | "file"
+export type QuestionType = "text" | "textarea" | "select" | "checkbox" | "file" | "industry"
 
 export interface User {
   id: string

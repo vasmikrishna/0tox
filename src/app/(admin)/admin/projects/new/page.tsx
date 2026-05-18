@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Check, ChevronRight, UserPlus, Users, Copy, Mail } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
+import { INDUSTRIES } from "@/lib/industries"
 import type { IntakeQuestion, Service, ServiceTier } from "@/types"
 
 const defaultServices: Service[] = [
@@ -398,6 +399,16 @@ export default function AdminNewProjectPage() {
                   </Label>
                   {q.type === "textarea" ? (
                     <Textarea id={q.id} value={answers[q.id] ?? ""} onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))} placeholder="Answer on behalf of the client (or leave blank for them to fill in)…" />
+                  ) : q.type === "industry" ? (
+                    <select
+                      id={q.id}
+                      value={answers[q.id] ?? ""}
+                      onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                      className="w-full text-sm border border-input rounded-md px-3 py-2 bg-background"
+                    >
+                      <option value="">— Select industry —</option>
+                      {INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+                    </select>
                   ) : q.type === "select" && q.options ? (
                     <div className="space-y-2">
                       {q.options.map((opt: string) => (

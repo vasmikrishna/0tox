@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Check, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
+import { INDUSTRIES } from "@/lib/industries"
 import type { IntakeQuestion, Service, ServiceTier } from "@/types"
 
 const defaultServices: Service[] = [
@@ -229,6 +230,16 @@ export default function NewProjectPage() {
                       value={answers[q.id] ?? ""}
                       onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
                     />
+                  ) : q.type === "industry" ? (
+                    <select
+                      id={q.id}
+                      value={answers[q.id] ?? ""}
+                      onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                      className="w-full text-sm border border-input rounded-md px-3 py-2 bg-background"
+                    >
+                      <option value="">— Select your industry —</option>
+                      {INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+                    </select>
                   ) : q.type === "select" && q.options ? (
                     <div className="space-y-2">
                       {q.options.map((opt: string) => (
