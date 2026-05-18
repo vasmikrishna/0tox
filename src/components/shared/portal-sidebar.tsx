@@ -1,16 +1,18 @@
 "use client"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 import {
   LayoutDashboard, FolderKanban, Plus, Users,
-  CreditCard, Image, Sliders, Globe, LogOut, ChevronRight
+  CreditCard, Image, Sliders, Globe, Mail, LogOut, ChevronRight
 } from "lucide-react"
 
 interface NavItem {
   label: string
   href: string
   icon: React.ElementType
+  badgeKey?: "enquiries"
 }
 
 const clientNav: NavItem[] = [
@@ -23,6 +25,7 @@ const adminNav: NavItem[] = [
   { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { label: "Projects", href: "/admin/projects", icon: FolderKanban },
   { label: "Clients", href: "/admin/clients", icon: Users },
+  { label: "Enquiries", href: "/admin/enquiries", icon: Mail, badgeKey: "enquiries" },
   { label: "Payments", href: "/admin/payments", icon: CreditCard },
   { label: "Portfolio", href: "/admin/portfolio", icon: Image },
   { label: "Website", href: "/admin/website", icon: Globe },
@@ -39,6 +42,23 @@ export function PortalSidebar({ role, userName, userEmail }: PortalSidebarProps)
   const pathname = usePathname()
   const router = useRouter()
   const nav = role === "admin" ? adminNav : clientNav
+  const [newEnquiries, setNewEnquiries] = useState(0)
+
+  useEffect(() => {
+    if (role !== "admin") return
+    let cancelled = false
+    async function poll() {
+      try {
+        const res = await fetch("/api/admin/enquiries?status=new")
+        if (!res.ok) return
+        const data = await res.json()
+        if (!cancelled) setNewEnquiries(data.counts?.new ?? 0)
+      } catch { /* ignore */ }
+    }
+    poll()
+    const id = setInterval(poll, 60_000) // refresh every minute
+    return () => { cancelled = true; clearInterval(id) }
+  }, [role, pathname])
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" })
@@ -69,8 +89,13 @@ export function PortalSidebar({ role, userName, userEmail }: PortalSidebarProps)
               )}
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
-              {item.label}
-              {active && <ChevronRight className="h-3 w-3 ml-auto" />}
+              <span className="flex-1">{item.label}</span>
+              {item.badgeKey === "enquiries" && newEnquiries > 0 && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-red-500 text-white">
+                  {newEnquiries}
+                </span>
+              )}
+              {active && <ChevronRight className="h-3 w-3" />}
             </Link>
           )
         })}
