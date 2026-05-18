@@ -1,8 +1,8 @@
-# 0→X Client Portal — Project Brief
+# NexoIT Client Portal — Project Brief
 
 ## Overview
 
-**0→X** is an agency client portal built with Next.js 15 (App Router). It has two portals:
+**NexoIT** is an agency client portal built with Next.js 15 (App Router). It has two portals:
 - **Admin portal** — for the agency owner to manage clients, projects, stages, payments, portfolio, and intake form config
 - **Client portal** — for clients to register, submit project intake, track progress, and pay invoices
 
@@ -188,7 +188,7 @@ STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 
 # Resend email (needs real value)
 RESEND_API_KEY=your_resend_api_key
-EMAIL_FROM=noreply@0tox.com
+EMAIL_FROM=noreply@nexoit.com.au
 
 # Cloudflare R2 resource uploads
 R2_ACCOUNT_ID=your_cloudflare_account_id

@@ -14,6 +14,7 @@ export default async function HomePage() {
     {
       key: "it",
       icon: "🖥️",
+      photo: "https://images.unsplash.com/photo-1531492746076-161ca9bcad58?auto=format&fit=crop&w=800&q=80",
       title: s(settings, "services_it_title"),
       tagline: s(settings, "services_it_tagline"),
       desc: s(settings, "services_it_desc"),
@@ -22,6 +23,7 @@ export default async function HomePage() {
     {
       key: "web",
       icon: "🌐",
+      photo: "https://images.unsplash.com/photo-1467232004584-a241de8bcf5d?auto=format&fit=crop&w=800&q=80",
       title: s(settings, "services_web_title"),
       tagline: s(settings, "services_web_tagline"),
       desc: s(settings, "services_web_desc"),
@@ -30,6 +32,7 @@ export default async function HomePage() {
     {
       key: "ms365",
       icon: "☁️",
+      photo: "https://images.unsplash.com/photo-1600880292089-90a7e086ee0c?auto=format&fit=crop&w=800&q=80",
       title: s(settings, "services_ms365_title"),
       tagline: s(settings, "services_ms365_tagline"),
       desc: s(settings, "services_ms365_desc"),
@@ -190,29 +193,31 @@ export default async function HomePage() {
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {serviceCards.map((svc) => (
-              <div key={svc.key} className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col">
-                <div className="w-14 h-14 rounded-xl flex items-center justify-center text-3xl mb-4"
-                  style={{ background: "color-mix(in srgb, var(--site-primary) 8%, white)" }}>
-                  {svc.icon}
+              <div key={svc.key} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col">
+                <div className="h-44 overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={svc.photo} alt={svc.title} className="w-full h-full object-cover" />
                 </div>
-                <h3 className="text-xl font-bold mb-2" style={{ color: "var(--site-primary)" }}>{svc.title}</h3>
-                <p className="text-sm font-semibold mb-3" style={{ color: "var(--site-accent)" }}>{svc.tagline}</p>
-                <p className="text-sm leading-relaxed text-gray-700 mb-4">{svc.desc}</p>
-                <ul className="space-y-2 flex-1">
-                  {svc.feats.map((f, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-gray-800">
-                      <Check className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: "var(--site-accent)" }} />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href={`/services#${svc.key}`}
-                  className="mt-6 inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                  style={{ background: "var(--site-primary)" }}
-                >
-                  Learn more <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
+                <div className="p-6 flex flex-col flex-1">
+                  <h3 className="text-xl font-bold mb-2" style={{ color: "var(--site-primary)" }}>{svc.title}</h3>
+                  <p className="text-sm font-semibold mb-3" style={{ color: "var(--site-accent)" }}>{svc.tagline}</p>
+                  <p className="text-sm leading-relaxed text-gray-700 mb-4">{svc.desc}</p>
+                  <ul className="space-y-2 flex-1">
+                    {svc.feats.map((f, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-gray-800">
+                        <Check className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: "var(--site-accent)" }} />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href={`/services#${svc.key}`}
+                    className="mt-6 inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                    style={{ background: "var(--site-primary)" }}
+                  >
+                    Learn more <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
               </div>
             ))}
           </div>
@@ -286,15 +291,20 @@ export default async function HomePage() {
                 href={`/work/${item.slug}`}
                 className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col group"
               >
-                <div
-                  className="aspect-video flex items-center justify-center text-5xl relative overflow-hidden"
-                  style={{ background: item.bg }}
-                >
-                  <div className="absolute inset-0 opacity-25" style={{
-                    backgroundImage: "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.4) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(255,255,255,0.25) 0%, transparent 50%)",
-                  }} />
-                  <span className="relative drop-shadow-md">{item.emoji}</span>
-                  <span className="absolute top-3 left-3 text-[10px] px-2 py-0.5 rounded-full bg-white/25 backdrop-blur text-white font-medium uppercase tracking-wider">
+                <div className="aspect-video relative overflow-hidden bg-gray-100">
+                  {item.cover ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.cover}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-5xl" style={{ background: item.bg }}>
+                      <span>{item.emoji}</span>
+                    </div>
+                  )}
+                  <span className="absolute top-3 left-3 text-[10px] px-2 py-0.5 rounded-full bg-black/40 backdrop-blur text-white font-medium uppercase tracking-wider">
                     {item.category}
                   </span>
                 </div>

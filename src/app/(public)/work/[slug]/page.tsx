@@ -11,7 +11,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params
   const project = getProjectBySlug(slug)
   if (!project) return { title: "Project not found" }
-  return { title: `${project.title} | 0→X` }
+  return { title: `${project.title} | NexoIT` }
 }
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -25,9 +25,18 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     <>
       {/* Hero */}
       <section style={{ background: project.bg }} className="text-white py-14 sm:py-20 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20 pointer-events-none" style={{
-          backgroundImage: "radial-gradient(circle at 15% 30%, rgba(255,255,255,0.3) 0%, transparent 50%), radial-gradient(circle at 85% 70%, rgba(255,255,255,0.2) 0%, transparent 50%)",
-        }} />
+        {project.cover && (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={project.cover} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/55" />
+          </>
+        )}
+        {!project.cover && (
+          <div className="absolute inset-0 opacity-20 pointer-events-none" style={{
+            backgroundImage: "radial-gradient(circle at 15% 30%, rgba(255,255,255,0.3) 0%, transparent 50%), radial-gradient(circle at 85% 70%, rgba(255,255,255,0.2) 0%, transparent 50%)",
+          }} />
+        )}
         <div className="max-w-4xl mx-auto px-4 sm:px-6 relative">
           <Link href="/work" className="inline-flex items-center gap-2 text-white/70 hover:text-white text-sm mb-6 transition-colors">
             <ArrowLeft className="h-4 w-4" /> Back to all work
@@ -135,9 +144,15 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               {related.map(r => (
                 <Link key={r.slug} href={`/work/${r.slug}`}
                   className="flex items-center gap-4 p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow group">
-                  <div className="w-16 h-16 rounded-lg flex items-center justify-center text-2xl flex-shrink-0"
-                    style={{ background: r.bg }}>
-                    <span>{r.emoji}</span>
+                  <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                    {r.cover ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.cover} alt={r.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-2xl" style={{ background: r.bg }}>
+                        <span>{r.emoji}</span>
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm leading-tight" style={{ color: "var(--site-primary)" }}>

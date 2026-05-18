@@ -50,8 +50,8 @@ export default function ContactPage() {
                 <ContactItem
                   icon={<Mail className="h-5 w-5" />}
                   label="Email"
-                  value="hello@0tox.com"
-                  href="mailto:hello@0tox.com"
+                  value="hello@nexoit.com.au"
+                  href="mailto:hello@nexoit.com.au"
                 />
                 <ContactItem
                   icon={<MapPin className="h-5 w-5" />}

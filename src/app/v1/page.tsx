@@ -65,7 +65,7 @@ export default async function LandingPage() {
       {/* Nav */}
       <header className="border-b border-border sticky top-0 z-50 bg-background/80 backdrop-blur">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <span className="text-xl font-bold tracking-tight">0→X</span>
+          <span className="text-xl font-bold tracking-tight">NexoIT</span>
           <nav className="hidden md:flex items-center gap-6">
             {NAV_LINKS.map(link => (
               <a key={link.href} href={link.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">{link.label}</a>
@@ -193,7 +193,7 @@ export default async function LandingPage() {
                 Hi, I&apos;m <strong className="text-foreground">Vamsi Krishna Chinipireddy</strong> — a full-stack developer who turns ideas into live products.
               </p>
               <p className="text-muted-foreground leading-relaxed">
-                I built 0→X to give businesses a direct line to high-quality web development without agency overhead. No bloat, no middlemen — just fast, clean builds you fully own.
+                I built NexoIT to give businesses a direct line to high-quality web development without agency overhead. No bloat, no middlemen — just fast, clean builds you fully own.
               </p>
               <div className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
@@ -249,10 +249,10 @@ export default async function LandingPage() {
               <Link href="/register">Start a project <ArrowRight className="h-4 w-4" /></Link>
             </Button>
             <a
-              href="mailto:hello@0tox.com"
+              href="mailto:hello@nexoit.com.au"
               className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              <Mail className="h-4 w-4" /> hello@0tox.com
+              <Mail className="h-4 w-4" /> hello@nexoit.com.au
             </a>
           </div>
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mt-4">
@@ -264,7 +264,7 @@ export default async function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-border py-10">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <span className="text-lg font-bold">0→X</span>
+          <span className="text-lg font-bold">NexoIT</span>
           <p className="text-sm text-muted-foreground">We help you establish your online presence.</p>
           <div className="flex items-center gap-4">
             <a

@@ -39,8 +39,8 @@ export async function POST(req: Request) {
     if (process.env.RESEND_API_KEY) {
       try {
         const settings = await getSiteSettings()
-        const to = s(settings, "contact_email") || "hello@0tox.com"
-        const from = process.env.RESEND_FROM_EMAIL || "enquiries@0tox.com"
+        const to = s(settings, "contact_email") || "hello@nexoit.com.au"
+        const from = process.env.RESEND_FROM_EMAIL || "enquiries@nexoit.com.au"
 
         const serviceLabel = {
           it: "IT Support & Infrastructure",
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: `0→X Enquiries <${from}>`,
+            from: `NexoIT Enquiries <${from}>`,
             to: [to],
             reply_to: email,
             subject: `New enquiry: ${name}${service ? ` (${serviceLabel})` : ""}`,

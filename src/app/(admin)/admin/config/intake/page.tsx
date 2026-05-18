@@ -16,8 +16,8 @@ const DEFAULT_SERVICES: Service[] = [
   { id: "standard", tier: "standard", name: "Standard", tagline: "A site that works harder", description: "Advanced website", price_label: "Custom pricing", features: [], active: true },
   { id: "pro", tier: "pro", name: "Pro", tagline: "From idea to full product", description: "Full web app", price_label: "Custom pricing", features: [], active: true },
 ]
-const LOCAL_SERVICES_KEY = "0tox_custom_services"
-const LOCAL_STAGE_TEMPLATES_KEY = "0tox_custom_stage_templates"
+const LOCAL_SERVICES_KEY = "nexoit_custom_services"
+const LOCAL_STAGE_TEMPLATES_KEY = "nexoit_custom_stage_templates"
 
 function slugifyService(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")

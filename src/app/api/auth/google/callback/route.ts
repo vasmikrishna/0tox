@@ -38,7 +38,7 @@ export async function GET(req: Request) {
     if (!googleUser.email) throw new Error("No email returned from Google")
 
     // Admin check
-    const adminEmail = process.env.ADMIN_EMAIL ?? "admin@0tox.com"
+    const adminEmail = process.env.ADMIN_EMAIL ?? "admin@nexoit.com.au"
     if (googleUser.email === adminEmail) {
       await createSession({ id: "admin", email: googleUser.email, name: googleUser.name ?? "Admin", role: "admin" })
       return NextResponse.redirect(`${origin}/admin/dashboard`)

@@ -32,7 +32,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center space-y-2">
-          <Link href="/" className="text-2xl font-bold tracking-tight">0→X</Link>
+          <Link href="/" className="text-2xl font-bold tracking-tight">NexoIT</Link>
           <p className="text-muted-foreground text-sm">Sign in to your account</p>
         </div>
 

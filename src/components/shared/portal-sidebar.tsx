@@ -69,7 +69,7 @@ export function PortalSidebar({ role, userName, userEmail }: PortalSidebarProps)
   return (
     <aside className="w-64 flex-shrink-0 border-r border-border h-screen sticky top-0 flex flex-col">
       <div className="p-6 border-b border-border">
-        <Link href="/" className="text-xl font-bold tracking-tight">0→X</Link>
+        <Link href="/" className="text-xl font-bold tracking-tight">NexoIT</Link>
         <p className="text-xs text-muted-foreground mt-1 capitalize">{role} portal</p>
       </div>
 

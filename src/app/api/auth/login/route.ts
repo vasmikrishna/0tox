@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { createSession } from "@/lib/session"
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@0tox.com"
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@nexoit.com.au"
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "admin123"
 
 export async function POST(req: Request) {

@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Check, ArrowRight } from "lucide-react"
 import { getSiteSettings, s } from "@/lib/site-settings"
 
-export const metadata = { title: "About Us | 0→X IT Services" }
+export const metadata = { title: "About Us | NexoIT" }
 
 const LinkedInIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">

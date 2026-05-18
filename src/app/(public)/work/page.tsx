@@ -2,7 +2,7 @@ import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { PORTFOLIO_SEED } from "@/lib/portfolio-seed"
 
-export const metadata = { title: "Our Work | 0→X IT Services" }
+export const metadata = { title: "Our Work | NexoIT" }
 
 export default function WorkPage() {
   const projects = PORTFOLIO_SEED
@@ -30,15 +30,20 @@ export default function WorkPage() {
                 className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col group"
               >
                 {/* Visual */}
-                <div
-                  className="aspect-video flex items-center justify-center text-6xl relative overflow-hidden"
-                  style={{ background: item.bg }}
-                >
-                  <div className="absolute inset-0 opacity-20" style={{
-                    backgroundImage: "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.3) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(255,255,255,0.2) 0%, transparent 50%)",
-                  }} />
-                  <span className="relative drop-shadow-lg">{item.emoji}</span>
-                  <span className="absolute top-3 left-3 text-xs px-2 py-0.5 rounded-full bg-white/20 backdrop-blur text-white font-medium">
+                <div className="aspect-video relative overflow-hidden bg-gray-100">
+                  {item.cover ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.cover}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-6xl" style={{ background: item.bg }}>
+                      <span>{item.emoji}</span>
+                    </div>
+                  )}
+                  <span className="absolute top-3 left-3 text-xs px-2 py-0.5 rounded-full bg-black/40 backdrop-blur text-white font-medium">
                     {item.category}
                   </span>
                 </div>
