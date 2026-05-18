@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input"
 import { ASSET_TYPES, assetTypeLabel, createAssetId, normalizeProjectAssets } from "@/lib/project-assets"
 import { cn } from "@/lib/utils"
 import type { Project, ProjectLink } from "@/types"
-import { ChevronRight, ExternalLink, Eye, EyeOff, FileText, Folder, ImageIcon, LinkIcon, List, ListOrdered, Palette, Plus, Quote, Redo2, Search, Strikethrough, Trash2, Underline as UnderlineIcon, Undo2, Upload, X } from "lucide-react"
+import { AlertCircle, CheckCircle2, ChevronRight, ExternalLink, Eye, EyeOff, FileText, Folder, ImageIcon, LinkIcon, List, ListOrdered, Loader2, Palette, Plus, Quote, Redo2, Search, Strikethrough, Trash2, Underline as UnderlineIcon, Undo2, Upload, X } from "lucide-react"
 
 type AssetTab = "all" | "folders" | "files" | "links" | "docs"
 type CreateMode = "folder" | "link" | "doc" | null
@@ -165,6 +165,18 @@ export function ProjectAssetsWorkspace({ project, mode }: { project: Project; mo
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
+  const [uploadProgress, setUploadProgress] = useState<{
+    total: number
+    completed: number
+    currentFile: string
+    succeeded: string[]
+    failed: { name: string; reason: string }[]
+  } | null>(null)
+  const [uploadSummary, setUploadSummary] = useState<{
+    kind: "success" | "partial" | "error"
+    succeeded: number
+    failed: { name: string; reason: string }[]
+  } | null>(null)
   const [folderTitle, setFolderTitle] = useState("")
   const [linkForm, setLinkForm] = useState({ label: "", url: "", type: "figma" as ProjectLink["type"], notes: "" })
   const [docForm, setDocForm] = useState({ label: "", content: "", notes: "" })
@@ -281,36 +293,74 @@ export function ProjectAssetsWorkspace({ project, mode }: { project: Project; mo
 
   async function uploadFiles(fileList: FileList | null) {
     if (!fileList?.length) return
+    const files = Array.from(fileList)
     setUploading(true)
     setError("")
-    const uploadedAssets: ProjectLink[] = []
+    setUploadSummary(null)
+    setUploadProgress({ total: files.length, completed: 0, currentFile: files[0]?.name ?? "", succeeded: [], failed: [] })
 
-    for (const file of Array.from(fileList)) {
-      const formData = new FormData()
-      formData.append("file", file)
-      const response = await fetch(`/api/projects/${project.id}/assets/upload`, { method: "POST", body: formData })
-      const payload = await response.json().catch(() => null)
-      if (!response.ok || !payload?.file) {
-        setError(payload?.error ?? `Upload failed for ${file.name}`)
-        setUploading(false)
-        return
+    const uploadedAssets: ProjectLink[] = []
+    const succeeded: string[] = []
+    const failed: { name: string; reason: string }[] = []
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      setUploadProgress(prev => prev && { ...prev, currentFile: file.name, completed: i })
+
+      try {
+        const formData = new FormData()
+        formData.append("file", file)
+        const response = await fetch(`/api/projects/${project.id}/assets/upload`, { method: "POST", body: formData })
+        const payload = await response.json().catch(() => null)
+
+        if (!response.ok || !payload?.file) {
+          failed.push({ name: file.name, reason: payload?.error ?? `HTTP ${response.status}` })
+        } else {
+          succeeded.push(payload.file.name)
+          uploadedAssets.push({
+            id: createAssetId(),
+            label: payload.file.name,
+            url: payload.file.url,
+            type: "file",
+            kind: "file",
+            folder_id: folderId,
+            visible_to_client: true,
+            size: payload.file.size,
+            mime_type: payload.file.type,
+            created_at: new Date().toISOString(),
+          })
+        }
+      } catch (err) {
+        failed.push({ name: file.name, reason: err instanceof Error ? err.message : "Network error" })
       }
-      uploadedAssets.push({
-        id: createAssetId(),
-        label: payload.file.name,
-        url: payload.file.url,
-        type: "file",
-        kind: "file",
-        folder_id: folderId,
-        visible_to_client: true,
-        size: payload.file.size,
-        mime_type: payload.file.type,
-        created_at: new Date().toISOString(),
+
+      setUploadProgress(prev => prev && {
+        ...prev,
+        completed: i + 1,
+        succeeded: [...succeeded],
+        failed: [...failed],
       })
     }
 
     setUploading(false)
-    void save([...uploadedAssets, ...assets])
+    setUploadProgress(null)
+
+    const summary = {
+      kind: (failed.length === 0 ? "success" : succeeded.length === 0 ? "error" : "partial") as "success" | "partial" | "error",
+      succeeded: succeeded.length,
+      failed,
+    }
+    setUploadSummary(summary)
+
+    // Save the successfully uploaded files (skip DB write if nothing succeeded)
+    if (uploadedAssets.length) {
+      await save([...uploadedAssets, ...assets])
+    }
+
+    // Auto-dismiss success after 5s; keep partial/error visible until user dismisses
+    if (summary.kind === "success") {
+      setTimeout(() => setUploadSummary(null), 5000)
+    }
   }
 
   function removeAsset(assetId: string) {
@@ -392,9 +442,15 @@ export function ProjectAssetsWorkspace({ project, mode }: { project: Project; mo
               <Button size="sm" onClick={() => { setSelectedAssetId(""); setCreateMode(createMode === "folder" ? null : "folder") }}><Plus className="h-4 w-4" /> Folder</Button>
               <Button size="sm" variant="outline" onClick={() => { setSelectedAssetId(""); setCreateMode(createMode === "doc" ? null : "doc") }}><FileText className="h-4 w-4" /> Doc</Button>
               <Button size="sm" variant="outline" onClick={() => { setSelectedAssetId(""); setCreateMode(createMode === "link" ? null : "link") }}><LinkIcon className="h-4 w-4" /> Link</Button>
-              <label className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-lg border border-input bg-background px-3 text-sm font-medium hover:bg-accent">
-                <Upload className="h-4 w-4" /> {uploading ? "Uploading" : "Upload"}
-                <input type="file" className="sr-only" multiple disabled={uploading} onChange={event => uploadFiles(event.target.files)} />
+              <label className={cn(
+                "inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-input bg-background px-3 text-sm font-medium",
+                uploading ? "cursor-wait opacity-80" : "cursor-pointer hover:bg-accent"
+              )}>
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {uploading && uploadProgress
+                  ? `Uploading ${uploadProgress.completed + 1}/${uploadProgress.total}…`
+                  : "Upload"}
+                <input type="file" className="sr-only" multiple disabled={uploading} onChange={event => { uploadFiles(event.target.files); event.target.value = "" }} />
               </label>
             </>
           )}
@@ -470,6 +526,79 @@ export function ProjectAssetsWorkspace({ project, mode }: { project: Project; mo
       )}
 
       {error && <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
+
+      {/* Upload progress banner */}
+      {uploadProgress && (
+        <div className="rounded-lg border border-blue-500/40 bg-blue-500/5 px-4 py-3">
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+              <span>Uploading {uploadProgress.completed + (uploading ? 1 : 0)} of {uploadProgress.total}</span>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {uploadProgress.succeeded.length} done
+              {uploadProgress.failed.length > 0 && ` · ${uploadProgress.failed.length} failed`}
+            </span>
+          </div>
+          {uploadProgress.currentFile && uploading && (
+            <p className="text-xs text-muted-foreground truncate mb-2">
+              Current: {uploadProgress.currentFile}
+            </p>
+          )}
+          <div className="h-1.5 bg-blue-500/15 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-blue-600 transition-all duration-300"
+              style={{ width: `${Math.round((uploadProgress.completed / uploadProgress.total) * 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Upload summary banner */}
+      {uploadSummary && !uploadProgress && (
+        <div className={cn(
+          "rounded-lg border px-4 py-3 flex items-start gap-3",
+          uploadSummary.kind === "success" && "border-green-500/40 bg-green-500/5",
+          uploadSummary.kind === "partial" && "border-amber-500/40 bg-amber-500/5",
+          uploadSummary.kind === "error" && "border-destructive/40 bg-destructive/10",
+        )}>
+          <div className="flex-shrink-0 pt-0.5">
+            {uploadSummary.kind === "success" ? (
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+            ) : (
+              <AlertCircle className={cn("h-5 w-5", uploadSummary.kind === "partial" ? "text-amber-600" : "text-destructive")} />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">
+              {uploadSummary.kind === "success" && `✓ ${uploadSummary.succeeded} file${uploadSummary.succeeded === 1 ? "" : "s"} uploaded successfully`}
+              {uploadSummary.kind === "partial" && `${uploadSummary.succeeded} uploaded · ${uploadSummary.failed.length} failed`}
+              {uploadSummary.kind === "error" && `Upload failed — 0 of ${uploadSummary.failed.length} files succeeded`}
+            </p>
+            {uploadSummary.failed.length > 0 && (
+              <details className="mt-2 text-xs">
+                <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                  Show {uploadSummary.failed.length} failed file{uploadSummary.failed.length === 1 ? "" : "s"}
+                </summary>
+                <ul className="mt-2 space-y-1 pl-3">
+                  {uploadSummary.failed.map((f, i) => (
+                    <li key={i} className="text-muted-foreground">
+                      <span className="font-mono">{f.name}</span> — <span className="text-destructive">{f.reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </div>
+          <button
+            onClick={() => setUploadSummary(null)}
+            className="flex-shrink-0 text-muted-foreground hover:text-foreground"
+            aria-label="Dismiss"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {createMode === "doc" ? null : visibleAssets.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border py-16 text-center text-sm text-muted-foreground">This folder is empty</div>
