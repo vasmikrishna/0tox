@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import {
   LayoutDashboard, FolderKanban, Plus, Users,
-  CreditCard, Image, Sliders, LogOut, ChevronRight
+  CreditCard, Image, Sliders, Globe, LogOut, ChevronRight
 } from "lucide-react"
 
 interface NavItem {
@@ -25,6 +25,7 @@ const adminNav: NavItem[] = [
   { label: "Clients", href: "/admin/clients", icon: Users },
   { label: "Payments", href: "/admin/payments", icon: CreditCard },
   { label: "Portfolio", href: "/admin/portfolio", icon: Image },
+  { label: "Website", href: "/admin/website", icon: Globe },
   { label: "Config", href: "/admin/config/intake", icon: Sliders },
 ]
 
