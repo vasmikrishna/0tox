@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { formatDate } from "@/lib/utils"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, Plus } from "lucide-react"
 import { MOCK_PROJECTS } from "@/lib/mock-data"
 
 const statusConfig: Record<string, { label: string; variant: "default"|"warning"|"brand"|"success"|"destructive" }> = {
@@ -33,12 +33,24 @@ export default async function AdminProjectsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">All Projects</h1>
-        <p className="text-muted-foreground mt-1">{projects.length} projects total</p>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">All Projects</h1>
+          <p className="text-muted-foreground mt-1">{projects.length} projects total</p>
+        </div>
+        <Button asChild variant="brand">
+          <Link href="/admin/projects/new"><Plus className="h-4 w-4" /> New project</Link>
+        </Button>
       </div>
       {!projects.length ? (
-        <Card className="border-dashed"><CardContent className="py-12 text-center text-muted-foreground text-sm">No projects yet</CardContent></Card>
+        <Card className="border-dashed">
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground text-sm mb-4">No projects yet</p>
+            <Button asChild variant="brand" size="sm">
+              <Link href="/admin/projects/new"><Plus className="h-4 w-4" /> Create your first project</Link>
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-2">
           {projects.map((project) => {
