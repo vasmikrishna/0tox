@@ -243,20 +243,29 @@ export default async function HomePage() {
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
-            {testimonials.map((t, i) => (
-              <div key={i} className="bg-white rounded-lg border border-gray-200 p-6">
-                <div className="flex gap-0.5 mb-3">
-                  {[...Array(5)].map((_, si) => (
-                    <Star key={si} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  ))}
+            {testimonials.map((t, i) => {
+              const initials = t.name.split(" ").map(n => n[0]).join("").slice(0, 2)
+              return (
+                <div key={i} className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                  <div className="flex gap-0.5 mb-3">
+                    {[...Array(5)].map((_, si) => (
+                      <Star key={si} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                    ))}
+                  </div>
+                  <p className="text-sm text-gray-700 leading-relaxed italic">&ldquo;{t.text}&rdquo;</p>
+                  <div className="mt-5 pt-4 border-t border-gray-100 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
+                      style={{ background: "var(--site-primary)" }}>
+                      {initials}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: "var(--site-primary)" }}>{t.name}</p>
+                      <p className="text-xs text-gray-500">{t.role}</p>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-700 leading-relaxed italic">&ldquo;{t.text}&rdquo;</p>
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-sm font-semibold" style={{ color: "var(--site-primary)" }}>{t.name}</p>
-                  <p className="text-xs text-gray-500">{t.role}</p>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </section>
