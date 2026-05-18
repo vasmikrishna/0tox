@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Eye, EyeOff, Trash2, ExternalLink } from "lucide-react"
-import type { PortfolioItem } from "@/types"
+import type { PortfolioItem, ServiceTier } from "@/types"
 import { MOCK_PORTFOLIO } from "@/lib/mock-data"
 
 const supabaseConfigured = () =>
@@ -17,7 +17,7 @@ const supabaseConfigured = () =>
 export default function AdminPortfolioPage() {
   const [items, setItems] = useState<PortfolioItem[]>([])
   const [adding, setAdding] = useState(false)
-  const [form, setForm] = useState({ title: "", description: "", image_url: "", live_url: "", service_tier: "", tags: "" })
+  const [form, setForm] = useState<{ title: string; description: string; image_url: string; live_url: string; service_tier: ServiceTier | ""; tags: string }>({ title: "", description: "", image_url: "", live_url: "", service_tier: "", tags: "" })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -114,7 +114,7 @@ export default function AdminPortfolioPage() {
               <div className="space-y-1.5"><Label>Live URL</Label><Input value={form.live_url} onChange={e => setForm(p => ({ ...p, live_url: e.target.value }))} placeholder="https://..." /></div>
               <div className="space-y-1.5">
                 <Label>Service tier</Label>
-                <select value={form.service_tier} onChange={e => setForm(p => ({ ...p, service_tier: e.target.value }))}
+                  <select value={form.service_tier} onChange={e => setForm(p => ({ ...p, service_tier: e.target.value as ServiceTier | "" }))}
                   className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-background">
                   <option value="">Any</option>
                   <option value="starter">Starter</option>

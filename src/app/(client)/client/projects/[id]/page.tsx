@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation"
+import Link from "next/link"
 import { getSession } from "@/lib/session"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { formatDate, formatCurrency } from "@/lib/utils"
-import { Download, CheckCircle2, Circle, Loader2, CreditCard, ExternalLink } from "lucide-react"
-import type { Stage, Payment, DeliverableFile } from "@/types"
+import { extractProjectAssets, visibleProjectAssets } from "@/lib/project-assets"
+import { Download, CheckCircle2, Circle, Loader2, CreditCard, ExternalLink, FolderOpen } from "lucide-react"
+import type { Project, Stage, Payment, DeliverableFile } from "@/types"
 import { cn } from "@/lib/utils"
 import { MOCK_PROJECTS, MOCK_STAGES, MOCK_PAYMENTS } from "@/lib/mock-data"
 
@@ -36,9 +38,9 @@ const supabaseConfigured = () =>
 export default async function ClientProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
-  let project: any = null
-  let stages: any[] = []
-  let payments: any[] = []
+  let project: Project | null = null
+  let stages: (Stage & { deliverable_files: DeliverableFile[] })[] = []
+  let payments: Payment[] = []
 
   if (supabaseConfigured()) {
     try {
@@ -49,24 +51,28 @@ export default async function ClientProjectPage({ params }: { params: Promise<{ 
       if (!dbUser) notFound()
 
       const { data: p } = await supabase.from("projects").select("*").eq("id", id).eq("client_id", dbUser.id).single()
-      project = p
+      project = p as unknown as Project | null
       if (!project) notFound()
 
       const [{ data: s }, { data: pay }] = await Promise.all([
         supabase.from("stages").select("*, deliverable_files(*)").eq("project_id", id).eq("visible_to_client", true).order("sort_order"),
         supabase.from("payments").select("*").eq("project_id", id).order("created_at"),
       ])
-      stages = s ?? []
-      payments = pay ?? []
+      stages = (s ?? []) as unknown as (Stage & { deliverable_files: DeliverableFile[] })[]
+      payments = (pay ?? []) as unknown as Payment[]
     } catch { notFound() }
   } else {
-    project = MOCK_PROJECTS.find(p => p.id === id) ?? MOCK_PROJECTS[1]
-    stages = MOCK_STAGES.filter(s => s.project_id === project.id && s.visible_to_client)
-    payments = MOCK_PAYMENTS.filter(p => p.project_id === project.id)
+    const found = MOCK_PROJECTS.find(p => p.id === id) ?? MOCK_PROJECTS[1]
+    project = found
+    stages = MOCK_STAGES.filter(s => s.project_id === found.id && s.visible_to_client)
+    payments = MOCK_PAYMENTS.filter(p => p.project_id === found.id)
   }
 
+  if (!project) notFound()
+
   const status = statusConfig[project.status as keyof typeof statusConfig]
-  const tierLabel = { starter: "Starter", standard: "Standard", pro: "Pro" }
+  const tierLabel: Record<string, string> = { starter: "Starter", standard: "Standard", pro: "Pro" }
+  const assetCount = visibleProjectAssets(project.project_links?.length ? project.project_links : extractProjectAssets(project.admin_notes)).length
 
   return (
     <div className="space-y-8">
@@ -77,7 +83,7 @@ export default async function ClientProjectPage({ params }: { params: Promise<{ 
             <Badge variant={status.variant}>{status.label}</Badge>
           </div>
           <p className="text-muted-foreground text-sm">
-            {tierLabel[project.service_tier as keyof typeof tierLabel]} tier · Submitted {formatDate(project.created_at)}
+            {tierLabel[project.service_tier] ?? project.service_tier} tier · Submitted {formatDate(project.created_at)}
           </p>
         </div>
       </div>
@@ -146,6 +152,25 @@ export default async function ClientProjectPage({ params }: { params: Promise<{ 
 
         {/* Payments */}
         <div className="space-y-4">
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold">Project assets</h2>
+            <Card>
+              <CardContent className="space-y-3 py-4 px-5">
+                <p className="text-sm text-muted-foreground">
+                  Open the project asset workspace to view files, folders, links, and docs shared with you.
+                </p>
+                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                  <span className="text-sm text-muted-foreground">{assetCount} asset{assetCount === 1 ? "" : "s"}</span>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={`/client/projects/${id}/assets`}>
+                      <FolderOpen className="h-3.5 w-3.5" /> Open assets
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           <h2 className="text-lg font-semibold">Payments</h2>
           {!payments?.length ? (
             <Card className="border-dashed">

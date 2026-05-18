@@ -38,7 +38,7 @@ create trigger on_auth_user_created
 -- ── Services ───────────────────────────────────────────────────────────────
 create table public.services (
   id          uuid primary key default uuid_generate_v4(),
-  tier        text not null check (tier in ('starter', 'standard', 'pro')),
+  tier        text not null check (tier ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
   name        text not null,
   tagline     text not null,
   description text not null,
@@ -55,7 +55,7 @@ insert into public.services (tier, name, tagline, description, price_label, feat
 -- ── Intake Questions ───────────────────────────────────────────────────────
 create table public.intake_questions (
   id          uuid primary key default uuid_generate_v4(),
-  service_tier text not null check (service_tier in ('starter', 'standard', 'pro')),
+  service_tier text not null check (service_tier ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
   label       text not null,
   type        text not null check (type in ('text', 'textarea', 'select', 'checkbox', 'file')),
   options     jsonb,
@@ -128,7 +128,7 @@ where service_tier = 'pro' and label = 'Do you need payments inside the app?';
 -- ── Stage Templates ────────────────────────────────────────────────────────
 create table public.stage_templates (
   id          uuid primary key default uuid_generate_v4(),
-  service_tier text not null check (service_tier in ('starter', 'standard', 'pro')),
+  service_tier text not null check (service_tier ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
   name        text not null,
   description text,
   sort_order  integer not null default 0
@@ -164,8 +164,10 @@ create table public.projects (
   id           uuid primary key default uuid_generate_v4(),
   client_id    uuid not null references public.users(id),
   title        text not null,
-  service_tier text not null check (service_tier in ('starter', 'standard', 'pro')),
+  service_tier text not null check (service_tier ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
   status       text not null default 'intake' check (status in ('intake', 'review', 'active', 'completed', 'cancelled')),
+  github_url   text,
+  project_links jsonb not null default '[]',
   admin_notes  text,
   created_at   timestamptz not null default now(),
   started_at   timestamptz,
@@ -224,7 +226,7 @@ create table public.portfolio_items (
   id          uuid primary key default uuid_generate_v4(),
   title       text not null,
   description text,
-  service_tier text check (service_tier in ('starter', 'standard', 'pro')),
+  service_tier text check (service_tier is null or service_tier ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
   tags        jsonb default '[]',
   image_url   text not null,
   live_url    text,

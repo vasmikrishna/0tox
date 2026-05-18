@@ -1,7 +1,6 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -9,82 +8,123 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Check, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { IntakeQuestion, ServiceTier } from "@/types"
+import { createClient } from "@/lib/supabase/client"
+import type { IntakeQuestion, Service, ServiceTier } from "@/types"
 
-const tiers = [
+const defaultServices: Service[] = [
   {
-    id: "starter" as ServiceTier,
+    id: "starter",
+    tier: "starter" as ServiceTier,
     name: "Starter",
     tagline: "Your first step online",
     description: "Clean 5-page website, mobile responsive, contact form, basic SEO.",
-    timeline: "3–5 days",
+    price_label: "3-5 days",
+    features: [],
+    active: true,
   },
   {
-    id: "standard" as ServiceTier,
+    id: "standard",
+    tier: "standard" as ServiceTier,
     name: "Standard",
     tagline: "A site that works harder",
     description: "Multi-page with animations, optional CMS, integrations, advanced SEO.",
-    timeline: "7–10 days",
+    price_label: "7-10 days",
+    features: [],
+    active: true,
   },
   {
-    id: "pro" as ServiceTier,
+    id: "pro",
+    tier: "pro" as ServiceTier,
     name: "Pro",
     tagline: "From idea to full product",
     description: "Full web app with authentication, database, dashboards, custom features.",
-    timeline: "14–21 days",
+    price_label: "14-21 days",
+    features: [],
+    active: true,
   },
 ]
+const LOCAL_SERVICES_KEY = "0tox_custom_services"
+
+function readLocalServices() {
+  if (typeof window === "undefined") return []
+  try {
+    return JSON.parse(window.localStorage.getItem(LOCAL_SERVICES_KEY) ?? "[]") as Service[]
+  } catch {
+    return []
+  }
+}
 
 const steps = ["Choose service", "Project details", "Review & submit"]
 
 export default function NewProjectPage() {
   const router = useRouter()
+  const supabase = createClient()
   const [step, setStep] = useState(0)
+  const [services, setServices] = useState<Service[]>(defaultServices)
   const [selectedTier, setSelectedTier] = useState<ServiceTier | null>(null)
   const [title, setTitle] = useState("")
   const [questions, setQuestions] = useState<IntakeQuestion[]>([])
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState("")
+
+  const loadQuestions = useCallback(async (tier: ServiceTier) => {
+    setLoading(true)
+    setError("")
+    const response = await fetch(`/api/intake/questions?tier=${tier}`)
+    const data = await response.json()
+    setQuestions((data.questions ?? []) as IntakeQuestion[])
+    setLoading(false)
+  }, [])
 
   useEffect(() => {
-    if (selectedTier) loadQuestions(selectedTier)
-  }, [selectedTier])
+    async function loadServices() {
+      const { data } = await supabase.from("services").select("*").eq("active", true).order("name")
+      const fetched = (data ?? []) as unknown as Service[]
+      const local = readLocalServices()
+      setServices([
+        ...defaultServices.filter(defaultService => !fetched.some(service => service.tier === defaultService.tier)),
+        ...fetched,
+        ...local.filter(localService => !fetched.some(service => service.tier === localService.tier) && !defaultServices.some(service => service.tier === localService.tier)),
+      ].sort((a, b) => a.name.localeCompare(b.name)))
+    }
 
-  async function loadQuestions(tier: ServiceTier) {
-    setLoading(true)
-    const supabase = createClient()
-    const { data } = await supabase
-      .from("intake_questions")
-      .select("*")
-      .eq("service_tier", tier)
-      .eq("active", true)
-      .order("sort_order")
-    setQuestions(data ?? [])
-    setLoading(false)
-  }
+    void loadServices()
+  }, [supabase])
+
+  useEffect(() => {
+    // The wizard loads the relevant intake questions after tier selection.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (selectedTier) {
+      setAnswers({})
+      void loadQuestions(selectedTier)
+    }
+  }, [loadQuestions, selectedTier])
+
+  const requiredQuestionsAnswered = questions
+    .filter(question => question.required)
+    .every(question => answers[question.id]?.trim())
 
   async function handleSubmit() {
     if (!selectedTier || !title) return
     setSubmitting(true)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    setError("")
 
-    const { data: project, error } = await supabase
-      .from("projects")
-      .insert({ client_id: user!.id, title, service_tier: selectedTier, status: "intake" })
-      .select()
-      .single()
+    const response = await fetch("/api/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, service_tier: selectedTier, answers }),
+    })
+    const data = await response.json()
 
-    if (error || !project) { setSubmitting(false); return }
+    if (!response.ok || !data.project) {
+      setError(data.error ?? "Could not submit project")
+      setSubmitting(false)
+      return
+    }
 
-    const responses = Object.entries(answers)
-      .filter(([, answer]) => answer)
-      .map(([question_id, answer]) => ({ project_id: project.id, question_id, answer }))
-
-    if (responses.length) await supabase.from("intake_responses").insert(responses)
-
-    router.push(`/client/projects/${project.id}?submitted=true`)
+    router.push(`/client/projects/${data.project.id}?submitted=true`)
   }
 
   return (
@@ -120,21 +160,21 @@ export default function NewProjectPage() {
       {step === 0 && (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">What kind of project do you need?</p>
-          {tiers.map((tier) => (
+          {services.map((tier) => (
             <Card
               key={tier.id}
               className={cn(
                 "cursor-pointer transition-all",
-                selectedTier === tier.id ? "border-foreground ring-1 ring-foreground" : "hover:border-foreground/30"
+                selectedTier === tier.tier ? "border-foreground ring-1 ring-foreground" : "hover:border-foreground/30"
               )}
-              onClick={() => setSelectedTier(tier.id)}
+              onClick={() => setSelectedTier(tier.tier)}
             >
               <CardContent className="flex items-center gap-4 py-5">
                 <div className={cn(
                   "w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center",
-                  selectedTier === tier.id ? "border-foreground bg-foreground" : "border-border"
+                  selectedTier === tier.tier ? "border-foreground bg-foreground" : "border-border"
                 )}>
-                  {selectedTier === tier.id && <div className="w-2 h-2 rounded-full bg-background" />}
+                  {selectedTier === tier.tier && <div className="w-2 h-2 rounded-full bg-background" />}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-baseline gap-2">
@@ -143,7 +183,7 @@ export default function NewProjectPage() {
                   </div>
                   <p className="text-sm text-muted-foreground mt-0.5">{tier.description}</p>
                 </div>
-                <span className="text-xs text-muted-foreground flex-shrink-0">{tier.timeline}</span>
+                <span className="text-xs text-muted-foreground flex-shrink-0">{tier.price_label}</span>
               </CardContent>
             </Card>
           ))}
@@ -219,7 +259,7 @@ export default function NewProjectPage() {
 
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => setStep(0)}>Back</Button>
-            <Button className="flex-1" disabled={!title} onClick={() => setStep(2)}>
+            <Button className="flex-1" disabled={!title || !requiredQuestionsAnswered} onClick={() => setStep(2)}>
               Review answers <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -260,6 +300,7 @@ export default function NewProjectPage() {
               Submit project
             </Button>
           </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
       )}
     </div>

@@ -42,12 +42,9 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
                 {phone}
               </a>
             )}
-            <Link href="/login" className="text-sm text-white/80 hover:text-white border border-white/30 rounded px-3 py-1.5 transition-colors">
-              Client login
-            </Link>
             <Link
               href="/contact"
-              className="text-sm font-semibold rounded px-4 py-1.5 transition-colors"
+              className="text-sm font-semibold rounded px-4 py-1.5 transition-colors hover:opacity-90"
               style={{ background: "var(--site-accent)", color: "#fff" }}
             >
               Get in touch
@@ -74,13 +71,9 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
                 <Phone className="h-3.5 w-3.5" /> {phone}
               </a>
             )}
-            <div className="pt-2 flex gap-3">
-              <Link href="/login" onClick={() => setOpen(false)}
-                className="flex-1 text-center text-sm border border-white/30 rounded px-3 py-2 text-white">
-                Client login
-              </Link>
+            <div className="pt-2">
               <Link href="/contact" onClick={() => setOpen(false)}
-                className="flex-1 text-center text-sm font-semibold rounded px-3 py-2 text-white"
+                className="block text-center text-sm font-semibold rounded px-3 py-2 text-white"
                 style={{ background: "var(--site-accent)" }}>
                 Get in touch
               </Link>

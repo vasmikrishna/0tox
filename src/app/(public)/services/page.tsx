@@ -59,14 +59,17 @@ export default async function ServicesPage() {
             <div className="max-w-6xl mx-auto px-4 sm:px-6">
               <div className="grid md:grid-cols-2 gap-12 items-center">
                 <div className={idx % 2 === 1 ? "md:order-2" : ""}>
-                  <div className="text-4xl mb-4">{svc.icon}</div>
+                  <div className="w-16 h-16 rounded-xl flex items-center justify-center text-4xl mb-4"
+                    style={{ background: "color-mix(in srgb, var(--site-primary) 10%, white)" }}>
+                    {svc.icon}
+                  </div>
                   <h2 className="text-3xl font-bold" style={{ color: "var(--site-primary)" }}>
                     {svc.title}
                   </h2>
-                  <p className="text-base font-medium mt-1 mb-4" style={{ color: "var(--site-accent)" }}>
+                  <p className="text-base font-semibold mt-1 mb-4" style={{ color: "var(--site-accent)" }}>
                     {svc.tagline}
                   </p>
-                  <p className="text-gray-600 leading-relaxed mb-6">{svc.desc}</p>
+                  <p className="text-gray-700 leading-relaxed mb-6 text-base">{svc.desc}</p>
                   <Link
                     href="/contact"
                     className="inline-flex items-center gap-2 rounded px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"

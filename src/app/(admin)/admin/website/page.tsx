@@ -5,10 +5,28 @@ import { Save, RefreshCw, Eye, Palette, FileText } from "lucide-react"
 type Settings = Record<string, string>
 
 const THEME_FIELDS = [
-  { key: "theme_primary", label: "Primary colour (navy)", type: "color", hint: "Used in header, footer, headings" },
-  { key: "theme_accent", label: "Accent colour (green)", type: "color", hint: "Used in buttons, icons, highlights" },
+  { key: "theme_primary", label: "Primary colour", type: "color", hint: "Used in header, footer, headings" },
+  { key: "theme_accent", label: "Accent colour", type: "color", hint: "Used in buttons, icons, highlights" },
   { key: "theme_bg", label: "Background colour", type: "color", hint: "Page background" },
   { key: "theme_text", label: "Body text colour", type: "color", hint: "Default text colour" },
+]
+
+const THEME_PRESETS = [
+  { name: "Aussie Navy", primary: "#1B3A6B", accent: "#16A34A", bg: "#f8f9fa", text: "#1a1a2e" },
+  { name: "Outback Red", primary: "#7C2D12", accent: "#F59E0B", bg: "#FFFBF5", text: "#1A1A1A" },
+  { name: "Coastal Teal", primary: "#0F766E", accent: "#F97316", bg: "#F0FDFA", text: "#134E4A" },
+  { name: "Charcoal Pro", primary: "#1F2937", accent: "#3B82F6", bg: "#F9FAFB", text: "#111827" },
+  { name: "Forest Green", primary: "#14532D", accent: "#FBBF24", bg: "#F7FEF8", text: "#1A2F1A" },
+  { name: "Midnight Blue", primary: "#0F172A", accent: "#22D3EE", bg: "#F8FAFC", text: "#0F172A" },
+  { name: "Ocean Breeze", primary: "#0369A1", accent: "#10B981", bg: "#F0F9FF", text: "#0C4A6E" },
+  { name: "Royal Purple", primary: "#581C87", accent: "#EC4899", bg: "#FAF5FF", text: "#3B0764" },
+  { name: "Earthy Brown", primary: "#5B3A1A", accent: "#D97706", bg: "#FEF9F0", text: "#2C1A0A" },
+  { name: "Slate Modern", primary: "#334155", accent: "#06B6D4", bg: "#F8FAFC", text: "#0F172A" },
+  { name: "Burgundy Pro", primary: "#7F1D1D", accent: "#D4A017", bg: "#FEFAF6", text: "#171717" },
+  { name: "Indigo Sky", primary: "#3730A3", accent: "#FB7185", bg: "#F5F3FF", text: "#1E1B4B" },
+  { name: "Desert Sand", primary: "#92400E", accent: "#0E7490", bg: "#FFFBEB", text: "#451A03" },
+  { name: "Pure Mono", primary: "#000000", accent: "#FACC15", bg: "#FFFFFF", text: "#000000" },
+  { name: "Soft Pink Tech", primary: "#9D174D", accent: "#0EA5E9", bg: "#FFF7F8", text: "#3F0D1F" },
 ]
 
 const CONTENT_SECTIONS = [
@@ -179,8 +197,51 @@ export default function WebsiteEditorPage() {
       {/* Theme tab */}
       {activeTab === "theme" && (
         <div className="space-y-6">
+          {/* Presets */}
           <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="font-semibold mb-4">Colour palette</h2>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-semibold">Quick themes</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">Click any preset to apply instantly. Customise below if needed.</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+              {THEME_PRESETS.map(preset => {
+                const isActive =
+                  settings.theme_primary === preset.primary &&
+                  settings.theme_accent === preset.accent
+                return (
+                  <button
+                    key={preset.name}
+                    onClick={() => {
+                      setSettings(prev => ({
+                        ...prev,
+                        theme_primary: preset.primary,
+                        theme_accent: preset.accent,
+                        theme_bg: preset.bg,
+                        theme_text: preset.text,
+                      }))
+                      setSaved(false)
+                    }}
+                    className={`group rounded-lg border-2 p-2 text-left transition-all hover:shadow-md ${
+                      isActive ? "border-foreground" : "border-border hover:border-foreground/30"
+                    }`}
+                  >
+                    <div className="rounded overflow-hidden flex h-8">
+                      <div className="flex-1" style={{ background: preset.primary }} />
+                      <div className="flex-1" style={{ background: preset.accent }} />
+                      <div className="flex-1" style={{ background: preset.bg }} />
+                    </div>
+                    <p className="text-xs font-medium mt-1.5 truncate">{preset.name}</p>
+                    {isActive && <p className="text-[10px] text-muted-foreground">Active ✓</p>}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-lg p-6">
+            <h2 className="font-semibold mb-4">Custom palette</h2>
             <div className="grid grid-cols-2 gap-6">
               {THEME_FIELDS.map(f => (
                 <div key={f.key}>

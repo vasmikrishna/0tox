@@ -103,7 +103,7 @@ export default async function AdminClientPage({ params }: { params: Promise<{ id
                 <div key={project.id} className="flex items-center justify-between border border-border rounded-lg px-4 py-3">
                   <div>
                     <p className="text-sm font-medium">{project.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{tierLabel[project.service_tier]} · {formatDate(project.created_at)}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{tierLabel[project.service_tier] ?? project.service_tier} · {formatDate(project.created_at)}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={status?.variant}>{status?.label}</Badge>

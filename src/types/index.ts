@@ -1,5 +1,6 @@
 export type UserRole = "client" | "admin"
-export type ServiceTier = "starter" | "standard" | "pro"
+export type DefaultServiceTier = "starter" | "standard" | "pro"
+export type ServiceTier = DefaultServiceTier | (string & {})
 export type ProjectStatus = "intake" | "review" | "active" | "completed" | "cancelled"
 export type StageStatus = "pending" | "in_progress" | "completed"
 export type PaymentStatus = "pending" | "paid" | "overdue"
@@ -21,11 +22,28 @@ export interface Project {
   title: string
   service_tier: ServiceTier
   status: ProjectStatus
+  github_url?: string
+  project_links?: ProjectLink[]
   admin_notes?: string
   created_at: string
   started_at?: string
   completed_at?: string
   client?: User
+}
+
+export interface ProjectLink {
+  id?: string
+  label: string
+  url: string
+  type?: "figma" | "sheet" | "doc" | "drive" | "website" | "other" | "file" | "folder" | "note"
+  kind?: "link" | "folder" | "doc" | "file"
+  notes?: string
+  content?: string
+  folder_id?: string
+  visible_to_client?: boolean
+  size?: number
+  mime_type?: string
+  created_at?: string
 }
 
 export interface IntakeQuestion {

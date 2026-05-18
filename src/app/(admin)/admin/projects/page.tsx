@@ -50,7 +50,7 @@ export default async function AdminProjectsPage() {
                     <p className="font-medium">{project.title}</p>
                     <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
                       <span>{project.users?.name}</span><span>·</span>
-                      <span>{tierLabel[project.service_tier]}</span><span>·</span>
+                      <span>{tierLabel[project.service_tier] ?? project.service_tier}</span><span>·</span>
                       <span>{formatDate(project.created_at)}</span>
                     </div>
                   </div>

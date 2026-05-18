@@ -16,7 +16,7 @@ const statusConfig = {
   cancelled: { label: "Cancelled",   variant: "destructive" as const },
 }
 
-const tierLabel = { starter: "Starter", standard: "Standard", pro: "Pro" }
+const tierLabel: Record<string, string> = { starter: "Starter", standard: "Standard", pro: "Pro" }
 
 const supabaseConfigured = () =>
   process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http") &&
@@ -85,7 +85,7 @@ export default async function ClientDashboard() {
                     <div>
                       <p className="font-medium">{project.title}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-muted-foreground">{tierLabel[project.service_tier]} tier</span>
+                        <span className="text-xs text-muted-foreground">{tierLabel[project.service_tier] ?? project.service_tier} tier</span>
                         <span className="text-muted-foreground/40">·</span>
                         <span className="text-xs text-muted-foreground">Started {formatDate(project.created_at)}</span>
                       </div>

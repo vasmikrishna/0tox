@@ -61,10 +61,10 @@ export function SiteFooter({ settings }: { settings: SiteSettings }) {
         <div className="border-t border-white/10 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/40">
           <span>© {new Date().getFullYear()} {settings.site_name}. All rights reserved.</span>
           <div className="flex gap-4">
-            <Link href="/login" className="hover:text-white/70 transition-colors">Client portal</Link>
             {settings.v1_active === "true" && (
               <Link href="/v1" className="hover:text-white/70 transition-colors">Classic site</Link>
             )}
+            <Link href="/login" className="text-white/30 hover:text-white/60 transition-colors text-[10px]">Staff</Link>
           </div>
         </div>
       </div>
