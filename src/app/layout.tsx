@@ -6,8 +6,8 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] })
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: { default: "0 to X", template: "%s | 0 to X" },
-  description: "From idea to internet. We build websites and web apps — fast, clean, and fully delivered.",
+  title: { default: "Site9", template: "%s | Site9" },
+  description: "Site9 — One Website for Every Business. Launch a professional website in minutes on a free subdomain. No coding, no design skills, no complicated setup.",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

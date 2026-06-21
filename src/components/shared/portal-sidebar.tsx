@@ -138,7 +138,7 @@ export function PortalSidebar({ role, userName, userEmail }: PortalSidebarProps)
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold truncate">{activeWs?.name ?? "Workspace"}</p>
-              <p className="text-xs text-muted-foreground">0toX</p>
+              <p className="text-xs text-muted-foreground">Site9</p>
             </div>
             <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           </button>
@@ -174,7 +174,7 @@ export function PortalSidebar({ role, userName, userEmail }: PortalSidebarProps)
         </div>
       ) : (
         <div className="p-6 border-b border-border">
-          <Link href="/" className="text-xl font-bold tracking-tight">0toX</Link>
+          <Link href="/" className="text-xl font-bold tracking-tight">Site9</Link>
           <p className="text-xs text-muted-foreground mt-1 capitalize">{role} portal</p>
         </div>
       )}

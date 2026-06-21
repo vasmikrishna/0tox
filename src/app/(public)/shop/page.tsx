@@ -8,7 +8,7 @@ import { MOCK_PRODUCTS } from "@/lib/mock-data"
 import { getCurrentTenant } from "@/lib/tenant"
 import type { Product } from "@/types"
 
-export const metadata = { title: "Shop | 0toX" }
+export const metadata = { title: "Shop | Site9" }
 
 const supabaseConfigured = () =>
   process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http") && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY

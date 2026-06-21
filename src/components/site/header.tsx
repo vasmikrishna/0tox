@@ -7,7 +7,7 @@ import type { SiteSettings } from "@/lib/site-settings"
 export function SiteHeader({ settings }: { settings: SiteSettings }) {
   const [open, setOpen] = useState(false)
   const phone = settings.contact_phone || ""
-  const siteName = settings.site_name || "0toX"
+  const siteName = settings.site_name || "Site9"
 
   const navLinks = [
     { href: "/services", label: "Services" },

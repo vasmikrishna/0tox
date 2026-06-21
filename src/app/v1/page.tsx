@@ -82,7 +82,7 @@ export default async function HomePage() {
             <div>
               <div className="inline-flex items-center gap-2 bg-white/10 rounded-full px-4 py-1.5 text-sm mb-6">
                 <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                Australian-owned · Remote-first · No lock-in contracts
+                No coding · Launch in minutes · Free subdomain
               </div>
               <h1 className="text-4xl sm:text-5xl font-bold leading-tight">
                 {s(settings, "hero_headline")}
@@ -125,14 +125,14 @@ export default async function HomePage() {
                   <div className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
                   <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
                   <div className="w-2.5 h-2.5 rounded-full bg-green-500/70" />
-                  <span className="text-[10px] text-white/30 ml-4 font-mono tracking-wider select-none">portal.0tox.com</span>
+                  <span className="text-[10px] text-white/30 ml-4 font-mono tracking-wider select-none">yourbusiness.site9.in</span>
                 </div>
                 {/* Image display */}
                 <div className="overflow-hidden rounded-lg bg-slate-950 aspect-square shadow-inner">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="/images/client_portal_hero.png"
-                    alt="0toX Client Portal Dashboard Mockup"
+                    alt="Site9 website preview"
                     className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-700 ease-out"
                   />
                 </div>
@@ -147,10 +147,10 @@ export default async function HomePage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-white/80 text-sm">
             {[
-              { icon: <Shield className="h-4 w-4" />, text: "No lock-in contracts" },
-              { icon: <Clock className="h-4 w-4" />, text: "Fast response times" },
-              { icon: <Award className="h-4 w-4" />, text: "Local Australian business" },
-              { icon: <Users className="h-4 w-4" />, text: "Plain English — no jargon" },
+              { icon: <Shield className="h-4 w-4" />, text: "No coding needed" },
+              { icon: <Clock className="h-4 w-4" />, text: "Launch in minutes" },
+              { icon: <Award className="h-4 w-4" />, text: "Free subdomain included" },
+              { icon: <Users className="h-4 w-4" />, text: "Works on any device" },
             ].map((t, i) => (
               <div key={i} className="flex items-center gap-2">
                 <span style={{ color: "var(--site-accent)" }}>{t.icon}</span>
@@ -165,9 +165,9 @@ export default async function HomePage() {
       <section className="py-16 sm:py-20" style={{ background: "var(--site-bg)" }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold" style={{ color: "var(--site-primary)" }}>How we can help</h2>
+            <h2 className="text-3xl font-bold" style={{ color: "var(--site-primary)" }}>Everything you need to get online</h2>
             <p className="mt-2 text-base" style={{ color: "var(--site-text)", opacity: 0.7 }}>
-              Practical tech services for Australian small businesses
+              Launch, showcase, and grow your business — all from one simple platform
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
@@ -210,9 +210,9 @@ export default async function HomePage() {
             <span className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full" style={{ background: "color-mix(in srgb, var(--site-accent) 10%, white)", color: "var(--site-accent)" }}>
               Simple & Streamlined
             </span>
-            <h2 className="text-3xl font-bold mt-4" style={{ color: "var(--site-primary)" }}>How 0toX Portal Works</h2>
+            <h2 className="text-3xl font-bold mt-4" style={{ color: "var(--site-primary)" }}>How Site9 Works</h2>
             <p className="mt-2 text-base max-w-xl mx-auto text-gray-600">
-              No messy email chains or lost attachments. Manage your entire project lifecyle, stripe invoice payments, and file deliveries in one secure workspace.
+              No coding, no designers, no complicated setup. Enter your business info, customize your site, and go live on your own subdomain — all in minutes.
             </p>
           </div>
 
@@ -228,9 +228,9 @@ export default async function HomePage() {
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-inner bg-white border border-gray-100 group-hover:scale-110 transition-transform duration-300">
                 📝
               </div>
-              <h3 className="text-lg font-bold mb-3" style={{ color: "var(--site-primary)" }}>1. Configure & Submit</h3>
+              <h3 className="text-lg font-bold mb-3" style={{ color: "var(--site-primary)" }}>1. Enter your details</h3>
               <p className="text-xs text-gray-600 leading-relaxed">
-                Choose your service tier, answer custom intake questions, and launch your project instantly inside the secure client dashboard.
+                Tell us about your business — your name, services, hours, and contact info. No coding or design skills required.
               </p>
             </div>
 
@@ -242,9 +242,9 @@ export default async function HomePage() {
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-inner bg-white border border-gray-100 group-hover:scale-110 transition-transform duration-300">
                 📊
               </div>
-              <h3 className="text-lg font-bold mb-3" style={{ color: "var(--site-primary)" }}>2. Track Stages Live</h3>
+              <h3 className="text-lg font-bold mb-3" style={{ color: "var(--site-primary)" }}>2. Customize your site</h3>
               <p className="text-xs text-gray-600 leading-relaxed">
-                Monitor real-time progress as we build. See visible deliverables, checklists, and project milestones update live.
+                Add your gallery, services, WhatsApp, and Google Maps. Pick a look that fits your business — it&apos;s mobile responsive by default.
               </p>
             </div>
 
@@ -256,9 +256,9 @@ export default async function HomePage() {
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-inner bg-white border border-gray-100 group-hover:scale-110 transition-transform duration-300">
                 💳
               </div>
-              <h3 className="text-lg font-bold mb-3" style={{ color: "var(--site-primary)" }}>3. Pay & Download</h3>
+              <h3 className="text-lg font-bold mb-3" style={{ color: "var(--site-primary)" }}>3. Go live in minutes</h3>
               <p className="text-xs text-gray-600 leading-relaxed">
-                Review finished work, complete secure Stripe payments, and download certified files directly from your workspace.
+                Publish to your free yourbusiness.site9.in subdomain — SEO ready and secure. Add a custom domain whenever you&apos;re ready to grow.
               </p>
             </div>
           </div>
@@ -283,9 +283,9 @@ export default async function HomePage() {
       <section className="py-16 sm:py-20" style={{ background: "var(--site-bg)" }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold" style={{ color: "var(--site-primary)" }}>What our clients say</h2>
+            <h2 className="text-3xl font-bold" style={{ color: "var(--site-primary)" }}>What our customers say</h2>
             <p className="mt-2 text-sm" style={{ color: "var(--site-text)", opacity: 0.7 }}>
-              Real feedback from Australian businesses we&apos;ve helped
+              Real feedback from small businesses already online with Site9
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
@@ -331,9 +331,9 @@ export default async function HomePage() {
       <section className="py-16 sm:py-20 bg-gray-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10">
-            <h2 className="text-3xl font-bold" style={{ color: "var(--site-primary)" }}>Recent work</h2>
+            <h2 className="text-3xl font-bold" style={{ color: "var(--site-primary)" }}>Made with Site9</h2>
             <p className="mt-2 text-sm" style={{ color: "var(--site-text)", opacity: 0.7 }}>
-              Sites and solutions we&apos;ve delivered for Australian businesses
+              Real businesses already online — cafe.site9.in, salon.site9.in, photographer.site9.in
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
@@ -384,7 +384,7 @@ export default async function HomePage() {
               className="inline-flex items-center gap-2 text-sm font-semibold transition-colors hover:opacity-80"
               style={{ color: "var(--site-primary)" }}
             >
-              View all our work <ArrowRight className="h-4 w-4" />
+              See more examples <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
@@ -393,9 +393,9 @@ export default async function HomePage() {
       {/* ── CTA banner ── */}
       <section style={{ background: "var(--site-accent)" }} className="py-14 text-white text-center">
         <div className="max-w-2xl mx-auto px-4 sm:px-6">
-          <h2 className="text-3xl font-bold">Ready to get started?</h2>
+          <h2 className="text-3xl font-bold">Ready to get your business online?</h2>
           <p className="mt-3 text-white/85">
-            Talk to us today — no obligation, no jargon, just straight answers about what we can do for your business.
+            Enter your business info and launch a professional website in minutes — free to start, on your own subdomain.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
             <Link
@@ -403,7 +403,7 @@ export default async function HomePage() {
               className="inline-flex items-center justify-center gap-2 rounded bg-white px-6 py-3 text-sm font-semibold transition-opacity hover:opacity-90"
               style={{ color: "var(--site-accent)" }}
             >
-              Get a free quote <ArrowRight className="h-4 w-4" />
+              Create your website <ArrowRight className="h-4 w-4" />
             </Link>
             {phone && (
               <a

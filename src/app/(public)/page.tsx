@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowRight, Check, Mail, MapPin } from "lucide-react"
+import { ArrowRight, Check, Mail } from "lucide-react"
 import { MOCK_PORTFOLIO, MOCK_CUSTOM_PAGES } from "@/lib/mock-data"
 import type { CustomPage } from "@/types"
 import { sanitizeHtml, sanitizeCss } from "@/lib/sanitize-html"
@@ -37,34 +37,34 @@ async function getHomepageOverride(): Promise<CustomPage | null> {
 
 const SERVICES = [
   {
-    tier: "starter",
-    name: "Starter",
-    tagline: "Your first step online",
-    description: "A clean, fast 5-page website to establish your presence. Perfect for small businesses, freelancers, and personal brands.",
-    price: "$300",
-    price_note: "one-time",
-    features: ["Up to 5 pages", "Mobile responsive", "Contact form", "Basic SEO", "Delivered in 3–5 days", "1 revision round"],
+    tier: "launch",
+    name: "Launch in minutes",
+    tagline: "Go live before lunch",
+    description: "Enter your business info and launch a professional website in minutes — no coding, no design skills, no complicated setup.",
+    price: "Free to start",
+    price_note: "your own subdomain included",
+    features: ["Instant website creation", "Free yourbusiness.site9.in subdomain", "Mobile responsive", "No coding or design skills"],
     highlight: false,
   },
   {
-    tier: "standard",
-    name: "Standard",
-    tagline: "A site that works harder",
-    description: "Multi-page website with animations, optional CMS, and deeper integrations. Built to convert and scale.",
-    price: "$2,500",
-    price_note: "one-time",
-    features: ["Up to 15 pages", "Animations & transitions", "Optional CMS", "Advanced SEO", "Third-party integrations", "2 revision rounds"],
-    highlight: false,
-  },
-  {
-    tier: "pro",
-    name: "Pro",
-    tagline: "From idea to full product",
-    description: "Complete web application with user login, dashboards, databases, and custom features. Zero to X.",
-    price: "Custom",
-    price_note: "scoped to your project",
-    features: ["Full web app", "User authentication", "Database & storage", "Admin dashboard", "Custom features", "3 revision rounds"],
+    tier: "showcase",
+    name: "Show off your business",
+    tagline: "Everything your customers need to know",
+    description: "Tell your story, show your work, and make it easy for customers to reach you — all from one simple business profile.",
+    price: "Free to start",
+    price_note: "your own subdomain included",
+    features: ["Business profile (services, hours, address)", "Image gallery", "WhatsApp integration", "Contact forms & lead capture", "Google Maps"],
     highlight: true,
+  },
+  {
+    tier: "grow",
+    name: "Get found & grow",
+    tagline: "Turn your site into a growth engine",
+    description: "Get discovered on Google, create content with AI, and track your visitors — with the option to bring your own domain.",
+    price: "Free to start",
+    price_note: "your own subdomain included",
+    features: ["SEO ready", "AI content generation", "Analytics dashboard", "Custom domain support", "Secure managed hosting"],
+    highlight: false,
   },
 ]
 
@@ -81,8 +81,8 @@ async function getPortfolio() {
 }
 
 const NAV_LINKS = [
-  { href: "#services", label: "Services" },
-  { href: "#portfolio", label: "Work" },
+  { href: "#services", label: "Features" },
+  { href: "#portfolio", label: "Examples" },
   { href: "#about", label: "About" },
   { href: "#contact", label: "Contact" },
 ]
@@ -106,7 +106,7 @@ export default async function LandingPage() {
       {/* Nav */}
       <header className="border-b border-border sticky top-0 z-50 bg-background/80 backdrop-blur">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <span className="text-xl font-bold tracking-tight">0toX</span>
+          <span className="text-xl font-bold tracking-tight">Site9</span>
           <nav className="hidden md:flex items-center gap-6">
             {NAV_LINKS.map(link => (
               <a key={link.href} href={link.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">{link.label}</a>
@@ -121,28 +121,28 @@ export default async function LandingPage() {
 
       {/* Hero */}
       <section className="max-w-6xl mx-auto px-6 pt-24 pb-20 text-center">
-        <Badge variant="outline" className="mb-6">Remote-first · Based in Australia</Badge>
+        <Badge variant="outline" className="mb-6">A website for every business</Badge>
         <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.05]">
-          0 → X
+          One Website for Every Business
         </h1>
         <p className="mt-6 text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-          We help you establish your online presence — from a clean landing page to a full product with users, payments, and a dashboard. Fast, clean, and fully delivered.
+          Whether you&apos;re a local shop, freelancer, photographer, restaurant, salon, PG owner, consultant, or startup — Site9 makes it simple, affordable, and accessible to get your business online. No coding. No design skills. No complicated setup.
         </p>
         <div className="flex items-center justify-center gap-4 mt-10">
           <Button asChild variant="brand" size="lg">
-            <Link href="/register">Start a project <ArrowRight className="h-4 w-4" /></Link>
+            <Link href="/register">Create your website <ArrowRight className="h-4 w-4" /></Link>
           </Button>
           <Button asChild variant="outline" size="lg">
-            <a href="#services">See what we build</a>
+            <a href="#portfolio">See examples</a>
           </Button>
         </div>
 
         {/* Trust bar */}
         <div className="flex items-center justify-center gap-8 mt-16 text-sm text-muted-foreground flex-wrap">
-          <span className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" /> Fast delivery</span>
-          <span className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" /> Clean, production-ready code</span>
-          <span className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" /> Transparent progress</span>
-          <span className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" /> You own everything</span>
+          <span className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" /> Launch in minutes</span>
+          <span className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" /> Free yourbusiness.site9.in subdomain</span>
+          <span className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" /> No coding needed</span>
+          <span className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" /> Works on any device</span>
         </div>
       </section>
 
@@ -150,14 +150,14 @@ export default async function LandingPage() {
       <section id="services" className="bg-muted/40 py-20">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold">What we build</h2>
-            <p className="text-muted-foreground mt-2">Three tiers. One team. Priced for where you are.</p>
+            <h2 className="text-3xl font-bold">Everything you need to get online</h2>
+            <p className="text-muted-foreground mt-2">Launch, showcase, and grow — all from one simple platform.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {SERVICES.map((service) => (
               <Card key={service.tier} className={service.highlight ? "border-foreground" : ""}>
                 <CardContent className="p-6 space-y-5">
-                  {service.highlight && <Badge variant="brand" className="text-xs">Most popular</Badge>}
+                  {service.highlight && <Badge variant="brand" className="text-xs">Most loved</Badge>}
                   <div>
                     <h3 className="text-xl font-bold">{service.name}</h3>
                     <p className="text-muted-foreground text-sm mt-1">{service.tagline}</p>
@@ -175,7 +175,7 @@ export default async function LandingPage() {
                     <p className="text-2xl font-bold mt-3">{service.price}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">{service.price_note}</p>
                     <Button asChild variant={service.highlight ? "brand" : "outline"} size="sm" className="w-full mt-4">
-                      <Link href="/register">Get started <ArrowRight className="h-3 w-3" /></Link>
+                      <Link href="/register">Create your website <ArrowRight className="h-3 w-3" /></Link>
                     </Button>
                   </div>
                 </CardContent>
@@ -190,8 +190,8 @@ export default async function LandingPage() {
         <section id="portfolio" className="py-20">
           <div className="max-w-6xl mx-auto px-6">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold">Our work</h2>
-              <p className="text-muted-foreground mt-2">Products and sites we&apos;ve shipped</p>
+              <h2 className="text-3xl font-bold">Made with Site9</h2>
+              <p className="text-muted-foreground mt-2">Real businesses already online — like cafe.site9.in, salon.site9.in, and photographer.site9.in</p>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {portfolio.map((item: any) => (
@@ -229,49 +229,50 @@ export default async function LandingPage() {
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div className="space-y-5">
-              <h2 className="text-3xl font-bold">About 0 to X</h2>
+              <h2 className="text-3xl font-bold">About Site9</h2>
               <p className="text-muted-foreground leading-relaxed text-lg">
-                Hi, I&apos;m <strong className="text-foreground">Vamsi Krishna Chinipireddy</strong> — a full-stack developer who turns ideas into live products.
+                <strong className="text-foreground">Our vision</strong> is to bring every business online. We imagine a future where having a website is as common as having a phone number, email, or WhatsApp account. Every business deserves its own digital identity.
               </p>
               <p className="text-muted-foreground leading-relaxed">
-                I built 0toX to give businesses a direct line to high-quality web development without agency overhead. No bloat, no middlemen — just fast, clean builds you fully own.
+                Millions of businesses still rely only on social media, WhatsApp, or word of mouth — and building a website is too often expensive, slow, and technically complex. Site9 removes the barriers.
+              </p>
+              <p className="text-muted-foreground leading-relaxed">
+                Getting online shouldn&apos;t be complicated. Getting a website shouldn&apos;t require a developer. Every business deserves a professional online presence.
               </p>
               <div className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-500" /> Speed — live in days, not months
+                  <Check className="h-4 w-4 text-green-500" /> No coding — launch in minutes
                 </div>
                 <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-500" /> Quality — production-ready, maintainable code
+                  <Check className="h-4 w-4 text-green-500" /> Free yourbusiness.site9.in subdomain
                 </div>
                 <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-500" /> Full ownership — your code, your servers
+                  <Check className="h-4 w-4 text-green-500" /> Simple, affordable, and accessible
                 </div>
               </div>
-              <a
-                href="https://www.linkedin.com/in/vkreddy001/"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/register"
                 className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors border border-border rounded-full px-4 py-2"
               >
-                ↗ Connect on LinkedIn
-              </a>
+                Create your website
+              </Link>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <Card><CardContent className="pt-6 pb-5 px-5">
-                <p className="text-3xl font-bold">3–5</p>
-                <p className="text-sm text-muted-foreground mt-1">Days to ship a Starter site</p>
+                <p className="text-3xl font-bold">Minutes</p>
+                <p className="text-sm text-muted-foreground mt-1">to launch</p>
               </CardContent></Card>
               <Card><CardContent className="pt-6 pb-5 px-5">
-                <p className="text-3xl font-bold">100%</p>
-                <p className="text-sm text-muted-foreground mt-1">Code ownership — yours</p>
+                <p className="text-3xl font-bold">No code</p>
+                <p className="text-sm text-muted-foreground mt-1">needed</p>
               </CardContent></Card>
               <Card><CardContent className="pt-6 pb-5 px-5">
-                <p className="text-3xl font-bold">0</p>
-                <p className="text-sm text-muted-foreground mt-1">Agency markup</p>
+                <p className="text-3xl font-bold">Free</p>
+                <p className="text-sm text-muted-foreground mt-1">subdomain</p>
               </CardContent></Card>
               <Card><CardContent className="pt-6 pb-5 px-5">
-                <p className="text-3xl font-bold">24h</p>
-                <p className="text-sm text-muted-foreground mt-1">Response time</p>
+                <p className="text-3xl font-bold">Any device</p>
+                <p className="text-sm text-muted-foreground mt-1">responsive</p>
               </CardContent></Card>
             </div>
           </div>
@@ -283,21 +284,18 @@ export default async function LandingPage() {
         <div className="max-w-3xl mx-auto px-6 text-center space-y-6">
           <h2 className="text-3xl font-bold">Get in touch</h2>
           <p className="text-muted-foreground text-lg">
-            Have a project in mind? Tell us about it — we&apos;ll get back to you within 24 hours.
+            Ready to get your business online? Create your website now, or reach out and we&apos;ll help you get started.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button asChild variant="brand" size="lg">
-              <Link href="/register">Start a project <ArrowRight className="h-4 w-4" /></Link>
+              <Link href="/register">Create your website <ArrowRight className="h-4 w-4" /></Link>
             </Button>
             <a
-              href="mailto:hello@0tox.com"
+              href="mailto:hello@site9.in"
               className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              <Mail className="h-4 w-4" /> hello@0tox.com
+              <Mail className="h-4 w-4" /> hello@site9.in
             </a>
-          </div>
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mt-4">
-            <MapPin className="h-4 w-4" /> Remote-first · Australia
           </div>
         </div>
       </section>
@@ -305,18 +303,16 @@ export default async function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-border py-10">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <span className="text-lg font-bold">0toX</span>
-          <p className="text-sm text-muted-foreground">We help you establish your online presence.</p>
+          <span className="text-lg font-bold">Site9</span>
+          <p className="text-sm text-muted-foreground">One Website for Every Business.</p>
           <div className="flex items-center gap-4">
             <a
-              href="https://www.linkedin.com/in/vkreddy001/"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="mailto:hello@site9.in"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              LinkedIn
+              hello@site9.in
             </a>
-            <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">Client login</Link>
+            <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">Sign in</Link>
           </div>
         </div>
       </footer>

@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Check, Phone, ArrowRight } from "lucide-react"
 import { getSiteSettings, s, features } from "@/lib/site-settings"
 
-export const metadata = { title: "Services | IT Support, Web & Microsoft 365" }
+export const metadata = { title: "Features | Site9" }
 
 export default async function ServicesPage() {
   const settings = await getSiteSettings()
@@ -11,7 +11,7 @@ export default async function ServicesPage() {
   const services = [
     {
       id: "it",
-      icon: "🖥️",
+      icon: "🚀",
       title: s(settings, "services_it_title"),
       tagline: s(settings, "services_it_tagline"),
       desc: s(settings, "services_it_desc"),
@@ -19,7 +19,7 @@ export default async function ServicesPage() {
     },
     {
       id: "web",
-      icon: "🌐",
+      icon: "🏪",
       title: s(settings, "services_web_title"),
       tagline: s(settings, "services_web_tagline"),
       desc: s(settings, "services_web_desc"),
@@ -27,7 +27,7 @@ export default async function ServicesPage() {
     },
     {
       id: "ms365",
-      icon: "☁️",
+      icon: "📈",
       title: s(settings, "services_ms365_title"),
       tagline: s(settings, "services_ms365_tagline"),
       desc: s(settings, "services_ms365_desc"),
@@ -40,9 +40,9 @@ export default async function ServicesPage() {
       {/* Page hero */}
       <section style={{ background: "var(--site-primary)" }} className="text-white py-14 sm:py-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <h1 className="text-4xl font-bold">Our Services</h1>
+          <h1 className="text-4xl font-bold">Everything you need to get online</h1>
           <p className="mt-3 text-white/70 max-w-xl text-lg">
-            Practical IT and digital services for Australian small businesses. No jargon, no lock-in.
+            Launch, showcase, and grow your business — all from one simple platform. No coding, no design skills.
           </p>
         </div>
       </section>
@@ -75,7 +75,7 @@ export default async function ServicesPage() {
                     className="inline-flex items-center gap-2 rounded px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
                     style={{ background: "var(--site-accent)" }}
                   >
-                    Enquire now <ArrowRight className="h-4 w-4" />
+                    Create your website <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
                 <div className={idx % 2 === 1 ? "md:order-1" : ""}>
@@ -102,15 +102,15 @@ export default async function ServicesPage() {
       {/* CTA strip */}
       <section style={{ background: "var(--site-primary)" }} className="py-12 text-white text-center">
         <div className="max-w-2xl mx-auto px-4 sm:px-6">
-          <h2 className="text-2xl font-bold">Not sure what you need?</h2>
-          <p className="mt-2 text-white/70">Give us a call — we&apos;ll tell you straight what makes sense for your business.</p>
+          <h2 className="text-2xl font-bold">Ready to get your business online?</h2>
+          <p className="mt-2 text-white/70">Enter your business info and launch a professional website in minutes — free to start.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
             <Link
               href="/contact"
               className="inline-flex items-center justify-center gap-2 rounded px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
               style={{ background: "var(--site-accent)" }}
             >
-              Get a free quote
+              Create your website
             </Link>
             {phone && (
               <a

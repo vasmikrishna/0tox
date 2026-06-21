@@ -39,8 +39,8 @@ async function getProduct(slug: string): Promise<Product | null> {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const product = await getProduct(slug)
-  if (!product) return { title: "Product not found | 0toX" }
-  return { title: `${product.name} | 0toX` }
+  if (!product) return { title: "Product not found | Site9" }
+  return { title: `${product.name} | Site9` }
 }
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {

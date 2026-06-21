@@ -2,7 +2,7 @@ import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { PORTFOLIO_SEED } from "@/lib/portfolio-seed"
 
-export const metadata = { title: "Our Work | 0toX" }
+export const metadata = { title: "Examples | Site9" }
 
 export default function WorkPage() {
   const projects = PORTFOLIO_SEED
@@ -12,9 +12,9 @@ export default function WorkPage() {
       {/* Hero */}
       <section style={{ background: "var(--site-primary)" }} className="text-white py-14 sm:py-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <h1 className="text-4xl font-bold">Our Work</h1>
+          <h1 className="text-4xl font-bold">Made with Site9</h1>
           <p className="mt-3 text-white/70 max-w-xl text-lg">
-            Real projects delivered for Australian businesses. Click any project to read the full case study.
+            Real businesses already online — like cafe.site9.in, salon.site9.in, and photographer.site9.in. Click any example to take a closer look.
           </p>
         </div>
       </section>
@@ -82,14 +82,14 @@ export default function WorkPage() {
       {/* CTA */}
       <section style={{ background: "var(--site-accent)" }} className="py-12 text-white text-center">
         <div className="max-w-xl mx-auto px-4 sm:px-6">
-          <h2 className="text-2xl font-bold">Want to be our next success story?</h2>
-          <p className="mt-2 text-white/85">Get in touch and let&apos;s talk about your project.</p>
+          <h2 className="text-2xl font-bold">Want your business online next?</h2>
+          <p className="mt-2 text-white/85">Create your website in minutes — free to start, on your own subdomain.</p>
           <Link
             href="/contact"
             className="inline-flex items-center gap-2 mt-6 rounded bg-white px-6 py-3 text-sm font-semibold transition-opacity hover:opacity-90"
             style={{ color: "var(--site-accent)" }}
           >
-            Start a project <ArrowRight className="h-4 w-4" />
+            Create your website <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </section>
