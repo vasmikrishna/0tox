@@ -10,12 +10,13 @@ import Highlight from "@tiptap/extension-highlight"
 import Underline from "@tiptap/extension-underline"
 import Link from "@tiptap/extension-link"
 import Placeholder from "@tiptap/extension-placeholder"
+import JSZip from "jszip"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ASSET_TYPES, assetTypeLabel, createAssetId, normalizeProjectAssets } from "@/lib/project-assets"
+import { ASSET_TYPES, assetTypeLabel, createAssetId, normalizeProjectAssets, isImageAsset, isPdfAsset } from "@/lib/project-assets"
 import { cn } from "@/lib/utils"
 import type { Project, ProjectLink } from "@/types"
-import { AlertCircle, CheckCircle2, ChevronRight, ExternalLink, Eye, EyeOff, FileText, Folder, ImageIcon, LinkIcon, List, ListOrdered, Loader2, Palette, Plus, Quote, Redo2, Search, Strikethrough, Trash2, Underline as UnderlineIcon, Undo2, Upload, X } from "lucide-react"
+import { AlertCircle, CheckCircle2, CheckSquare, ChevronRight, Download, ExternalLink, Eye, EyeOff, FileText, Folder, ImageIcon, LinkIcon, List, ListOrdered, Loader2, Palette, Plus, Quote, Redo2, Search, Square, Strikethrough, Trash2, Underline as UnderlineIcon, Undo2, Upload, X } from "lucide-react"
 
 type AssetTab = "all" | "folders" | "files" | "links" | "docs"
 type CreateMode = "folder" | "link" | "doc" | null
@@ -48,12 +49,23 @@ function AssetGlyph({ asset }: { asset: ProjectLink }) {
   if (asset.kind === "folder") return <Folder className="h-5 w-5 text-sky-400" />
   if (asset.kind === "doc") return <FileText className="h-5 w-5 text-emerald-400" />
   if (asset.kind === "link") return <LinkIcon className="h-5 w-5 text-violet-400" />
-  if (asset.mime_type?.startsWith("image/")) return <ImageIcon className="h-5 w-5 text-amber-400" />
+  if (isImageAsset(asset)) return <ImageIcon className="h-5 w-5 text-amber-400" />
   return <Upload className="h-5 w-5 text-muted-foreground" />
 }
 
-function assetMeta(asset: ProjectLink) {
-  if (asset.kind === "folder") return "Folder"
+function assetMeta(asset: ProjectLink, allAssets?: ProjectLink[]) {
+  if (asset.kind === "folder" && allAssets) {
+    const children = allAssets.filter(a => a.folder_id === asset.id)
+    const fileCount = children.filter(a => a.kind === "file").length
+    const folderCount = children.filter(a => a.kind === "folder").length
+    const parts: string[] = []
+    if (folderCount) parts.push(`${folderCount} folder${folderCount !== 1 ? "s" : ""}`)
+    if (fileCount) parts.push(`${fileCount} file${fileCount !== 1 ? "s" : ""}`)
+    const otherCount = children.length - fileCount - folderCount
+    if (otherCount > 0) parts.push(`${otherCount} other`)
+    return parts.length ? parts.join(", ") : "Empty folder"
+  }
+  if (asset.kind === "folder") return "folder"
   if (asset.kind === "doc") return "Document"
   if (asset.kind === "link") return assetTypeLabel(asset.type)
   return `Uploaded File${asset.size ? ` · ${bytes(asset.size)}` : ""}`
@@ -151,19 +163,68 @@ function DocEditor({ value, onChange, placeholder, minHeight = "min-h-[520px]" }
   )
 }
 
-export function ProjectAssetsWorkspace({ project, mode }: { project: Project; mode: "admin" | "client" }) {
+async function triggerDownload(url: string, filename: string) {
+  try {
+    const res = await fetch(url)
+    const blob = await res.blob()
+    const blobUrl = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = blobUrl
+    a.download = filename
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10_000)
+  } catch {
+    window.open(url, "_blank")
+  }
+}
+
+async function downloadAsZip(files: ProjectLink[], zipName: string) {
+  const zip = new JSZip()
+  const usedNames = new Map<string, number>()
+
+  await Promise.all(
+    files.map(async (f) => {
+      if (!f.url) return
+      try {
+        const res = await fetch(f.url)
+        const blob = await res.blob()
+        const ext = f.label.includes(".") ? "" : (f.mime_type?.split("/")[1] ? `.${f.mime_type.split("/")[1]}` : "")
+        const base = `${f.label}${ext}`
+        const count = (usedNames.get(base) ?? 0) + 1
+        usedNames.set(base, count)
+        const name = count > 1 ? `${f.label} (${count - 1})${ext}` : base
+        zip.file(name, blob)
+      } catch {
+        // skip files that fail to fetch
+      }
+    })
+  )
+
+  const blob = await zip.generateAsync({ type: "blob" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `${zipName}.zip`
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 10_000)
+}
+
+export function ProjectAssetsWorkspace({ project, mode, initialFolderId = "" }: { project: Project; mode: "admin" | "client" | "employee"; initialFolderId?: string }) {
   const router = useRouter()
-  const isAdmin = mode === "admin"
+  const isAdmin = mode === "admin" || mode === "employee"
   const [assets, setAssets] = useState<ProjectLink[]>(() => normalizeProjectAssets(project.project_links))
   const [tab, setTab] = useState<AssetTab>("all")
   const [query, setQuery] = useState("")
   const [gridSize, setGridSize] = useState<GridSize>("small")
   const [sortMode, setSortMode] = useState<SortMode>("name-asc")
-  const [folderId, setFolderId] = useState("")
+  const [folderId, setFolderId] = useState(initialFolderId)
   const [selectedAssetId, setSelectedAssetId] = useState("")
   const [createMode, setCreateMode] = useState<CreateMode>(null)
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [downloading, setDownloading] = useState(false)
   const [error, setError] = useState("")
   const [uploadProgress, setUploadProgress] = useState<{
     total: number
@@ -184,8 +245,8 @@ export function ProjectAssetsWorkspace({ project, mode }: { project: Project; mo
   const folders = useMemo(() => assets.filter(asset => asset.kind === "folder"), [assets])
   const currentFolder = folders.find(folder => folder.id === folderId)
   const selectedAsset = assets.find(asset => asset.id === selectedAssetId)
-  const isImagePreview = selectedAsset?.mime_type?.startsWith("image/")
-  const isPdfPreview = selectedAsset?.mime_type === "application/pdf" || selectedAsset?.url?.toLowerCase().endsWith(".pdf")
+  const isImagePreview = selectedAsset ? isImageAsset(selectedAsset) : false
+  const isPdfPreview = selectedAsset ? isPdfAsset(selectedAsset) : false
   const selectedFolderChildren = selectedAsset?.kind === "folder" ? assets.filter(asset => asset.folder_id === selectedAsset.id && (isAdmin || asset.visible_to_client !== false)) : []
 
   const folderPath = useMemo(() => {
@@ -363,6 +424,71 @@ export function ProjectAssetsWorkspace({ project, mode }: { project: Project; mo
     }
   }
 
+  function collectFiles(rootFolderId: string): ProjectLink[] {
+    const result: ProjectLink[] = []
+    const queue = [rootFolderId]
+    while (queue.length) {
+      const id = queue.shift()!
+      for (const asset of assets) {
+        if ((asset.folder_id ?? "") !== id) continue
+        if (asset.kind === "file" && asset.url) result.push(asset)
+        if (asset.kind === "folder" && asset.id) queue.push(asset.id)
+      }
+    }
+    return result
+  }
+
+  async function handleDownloadAll() {
+    const files = visibleAssets.filter(a => a.kind === "file" && a.url)
+    if (!files.length) return
+    setDownloading(true)
+    await downloadAsZip(files, project.title ?? "assets")
+    setDownloading(false)
+  }
+
+  async function handleDownloadFolder(folder: ProjectLink) {
+    const files = collectFiles(folder.id ?? "")
+    if (!files.length) return
+    setDownloading(true)
+    await downloadAsZip(files, folder.label)
+    setDownloading(false)
+  }
+
+  async function handleDownloadSelected() {
+    const selected = visibleAssets.filter(a => selectedIds.has(a.id ?? "") && a.kind === "file" && a.url)
+    if (!selected.length) return
+    setDownloading(true)
+    if (selected.length === 1) {
+      await triggerDownload(selected[0].url!, selected[0].label)
+    } else {
+      await downloadAsZip(selected, "selected-files")
+    }
+    setDownloading(false)
+  }
+
+  function toggleSelectMode() {
+    setSelectMode(prev => !prev)
+    setSelectedIds(new Set())
+    setSelectedAssetId("")
+  }
+
+  function toggleSelectId(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function selectAll() {
+    setSelectedIds(new Set(visibleAssets.map(a => a.id ?? "").filter(Boolean)))
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set())
+  }
+
   function removeAsset(assetId: string) {
     if (selectedAssetId === assetId) setSelectedAssetId("")
     if (folderId === assetId) setFolderId("")
@@ -431,7 +557,15 @@ export function ProjectAssetsWorkspace({ project, mode }: { project: Project; mo
           <h1 className="text-2xl font-bold">Project assets</h1>
         </div>
         <Button variant="outline" asChild>
-          <a href={mode === "admin" ? `/admin/projects/${project.id}` : `/client/projects/${project.id}`}>Back to project</a>
+          <a href={
+            mode === "admin"
+              ? `/admin/projects/${project.id}`
+              : mode === "employee"
+              ? `/employee/projects/${project.id}`
+              : `/client/projects/${project.id}`
+          }>
+            Back to project
+          </a>
         </Button>
       </div>
 
@@ -452,6 +586,19 @@ export function ProjectAssetsWorkspace({ project, mode }: { project: Project; mo
                   : "Upload"}
                 <input type="file" className="sr-only" multiple disabled={uploading} onChange={event => { uploadFiles(event.target.files); event.target.value = "" }} />
               </label>
+            </>
+          )}
+          {visibleAssets.some(a => a.kind === "file" && a.url) && (
+            <>
+              <Button size="sm" variant={selectMode ? "default" : "outline"} onClick={toggleSelectMode}>
+                <CheckSquare className="h-4 w-4" /> {selectMode ? "Cancel select" : "Select"}
+              </Button>
+              {!selectMode && (
+                <Button size="sm" variant="outline" disabled={downloading} onClick={handleDownloadAll}>
+                  {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  {downloading ? "Preparing…" : "Download all"}
+                </Button>
+              )}
             </>
           )}
         </div>
@@ -600,49 +747,132 @@ export function ProjectAssetsWorkspace({ project, mode }: { project: Project; mo
         </div>
       )}
 
+      {selectMode && (
+        <div className="sticky top-[120px] z-20 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-background/95 px-4 py-2.5 backdrop-blur shadow-md">
+          <button onClick={selectedIds.size === visibleAssets.length ? clearSelection : selectAll} className="flex items-center gap-2 text-sm font-medium hover:text-foreground text-muted-foreground transition-colors">
+            {selectedIds.size === visibleAssets.length
+              ? <><CheckSquare className="h-4 w-4" /> Deselect all</>
+              : <><Square className="h-4 w-4" /> Select all</>}
+          </button>
+          <span className="text-sm text-muted-foreground">
+            {selectedIds.size > 0 ? `${selectedIds.size} selected` : "Click items to select"}
+          </span>
+          <div className="ml-auto flex items-center gap-2">
+            {selectedIds.size > 0 && (
+              <>
+                <Button size="sm" variant="ghost" onClick={clearSelection}>Clear</Button>
+                <Button size="sm" disabled={downloading} onClick={handleDownloadSelected}>
+                  {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  {downloading ? "Preparing…" : `Download ${selectedIds.size > 1 ? `${selectedIds.size} files` : "file"}`}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {createMode === "doc" ? null : visibleAssets.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border py-16 text-center text-sm text-muted-foreground">This folder is empty</div>
       ) : (
         <div className={cn("grid", gridClass)}>
-          {visibleAssets.map(asset => (
-            <div
-              key={asset.id}
-              role="button"
-              tabIndex={0}
-              className={cn("group overflow-hidden rounded-lg border border-border bg-card text-left outline-none transition hover:border-muted-foreground/60 focus-visible:border-foreground", selectedAssetId === asset.id && "border-foreground")}
-              onDoubleClick={() => asset.kind === "folder" && setFolderId(asset.id ?? "")}
-              onClick={() => setSelectedAssetId(asset.id ?? "")}
-              onKeyDown={event => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault()
-                  setSelectedAssetId(asset.id ?? "")
-                }
-              }}
-            >
-              <div className="block w-full">
-                <div className={cn("flex items-center justify-center bg-muted/30", gridSize === "small" ? "aspect-[5/3]" : "aspect-[4/3]")}>
-                  {asset.kind === "file" && asset.mime_type?.startsWith("image/") ? (
-                    <img src={asset.url} alt={asset.label} className="h-full w-full object-cover" />
-                  ) : (
-                    <AssetGlyph asset={asset} />
+          {visibleAssets.map(asset => {
+            const isChecked = selectedIds.has(asset.id ?? "")
+            return (
+              <div
+                key={asset.id}
+                role="button"
+                tabIndex={0}
+                className={cn(
+                  "group overflow-hidden rounded-lg border bg-card text-left outline-none transition",
+                  selectMode
+                    ? isChecked ? "border-primary ring-1 ring-primary" : "border-border hover:border-muted-foreground/60 cursor-pointer"
+                    : cn("border-border hover:border-muted-foreground/60 focus-visible:border-foreground", selectedAssetId === asset.id && "border-foreground")
+                )}
+                onDoubleClick={() => !selectMode && asset.kind === "folder" && setFolderId(asset.id ?? "")}
+                onClick={() => selectMode ? toggleSelectId(asset.id ?? "") : setSelectedAssetId(asset.id ?? "")}
+                onKeyDown={event => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault()
+                    if (selectMode) {
+                      toggleSelectId(asset.id ?? "")
+                    } else {
+                      setSelectedAssetId(asset.id ?? "")
+                    }
+                  }
+                }}
+              >
+                <div className="relative block w-full">
+                  <div className={cn("flex items-center justify-center bg-muted/30", gridSize === "small" ? "aspect-[5/3]" : "aspect-[4/3]")}>
+                    {asset.kind === "folder" ? (() => {
+                      const children = assets.filter(a => a.folder_id === asset.id)
+                      const imageChildren = children.filter(c => c.kind === "file" && isImageAsset(c))
+                      const totalCount = children.length
+                      if (imageChildren.length >= 4) {
+                        return (
+                          <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-px bg-border/30">
+                            {imageChildren.slice(0, 4).map(img => (
+                              <img key={img.id} src={img.url} alt={img.label} className="h-full w-full object-cover" />
+                            ))}
+                          </div>
+                        )
+                      }
+                      if (imageChildren.length >= 1) {
+                        return (
+                          <div className="relative h-full w-full">
+                            <img src={imageChildren[0].url} alt={imageChildren[0].label} className="h-full w-full object-cover opacity-60" />
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30">
+                              <Folder className="h-7 w-7 text-sky-300" />
+                              <span className="mt-1 text-xs font-medium text-white">{totalCount} item{totalCount !== 1 ? "s" : ""}</span>
+                            </div>
+                          </div>
+                        )
+                      }
+                      return (
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          <Folder className={cn("text-sky-400", gridSize === "small" ? "h-8 w-8" : "h-10 w-10")} />
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {totalCount > 0 ? `${totalCount} item${totalCount !== 1 ? "s" : ""}` : "Empty"}
+                          </span>
+                        </div>
+                      )
+                    })() : asset.kind === "file" && isImageAsset(asset) ? (
+                      <img src={asset.url} alt={asset.label} className="h-full w-full object-cover" />
+                    ) : (
+                      <AssetGlyph asset={asset} />
+                    )}
+                  </div>
+                  {selectMode && (
+                    <div className={cn(
+                      "absolute top-2 left-2 flex h-5 w-5 items-center justify-center rounded border-2 transition-colors",
+                      isChecked ? "border-primary bg-primary text-primary-foreground" : "border-white/80 bg-black/30"
+                    )}>
+                      {isChecked && <CheckSquare className="h-3.5 w-3.5" />}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-start gap-2 p-3">
+                  <AssetGlyph asset={asset} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium" title={asset.label}>{asset.label}</p>
+                    <p className="text-xs text-muted-foreground">{assetMeta(asset, assets)}</p>
+                  </div>
+                  {!selectMode && (
+                    <div className="flex opacity-0 group-hover:opacity-100">
+                      {asset.kind === "file" && asset.url && (
+                        <Button size="icon" variant="ghost" className="h-7 w-7" title="Download" onClick={event => { event.stopPropagation(); void triggerDownload(asset.url!, asset.label) }}><Download className="h-3.5 w-3.5" /></Button>
+                      )}
+                      {isAdmin && (
+                        <>
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={event => { event.stopPropagation(); updateAsset(asset.id ?? "", { visible_to_client: asset.visible_to_client === false }) }}>{asset.visible_to_client === false ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}</Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={event => { event.stopPropagation(); removeAsset(asset.id ?? "") }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                        </>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
-              <div className="flex items-start gap-2 p-3">
-                <AssetGlyph asset={asset} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium" title={asset.label}>{asset.label}</p>
-                  <p className="text-xs text-muted-foreground">{asset.kind === "link" ? assetTypeLabel(asset.type) : asset.kind}{asset.size ? ` · ${bytes(asset.size)}` : ""}</p>
-                </div>
-                {isAdmin && (
-                  <div className="flex opacity-70 group-hover:opacity-100">
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={event => { event.stopPropagation(); updateAsset(asset.id ?? "", { visible_to_client: asset.visible_to_client === false }) }}>{asset.visible_to_client === false ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}</Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={event => { event.stopPropagation(); removeAsset(asset.id ?? "") }}><Trash2 className="h-3.5 w-3.5" /></Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -674,7 +904,7 @@ export function ProjectAssetsWorkspace({ project, mode }: { project: Project; mo
                       {selectedFolderChildren.slice(0, 6).map(child => (
                         <div key={child.id} className="overflow-hidden rounded-md border border-border bg-background">
                           <div className="flex aspect-[4/3] items-center justify-center bg-muted/30">
-                            {child.kind === "file" && child.mime_type?.startsWith("image/") ? <img src={child.url} alt={child.label} className="h-full w-full object-cover" /> : <AssetGlyph asset={child} />}
+                            {child.kind === "file" && isImageAsset(child) ? <img src={child.url} alt={child.label} className="h-full w-full object-cover" /> : <AssetGlyph asset={child} />}
                           </div>
                           <p className="truncate px-2 py-1.5 text-xs" title={child.label}>{child.label}</p>
                         </div>
@@ -682,7 +912,15 @@ export function ProjectAssetsWorkspace({ project, mode }: { project: Project; mo
                     </div>
                   )}
                 </div>
-                <Button onClick={() => { setFolderId(selectedAsset.id ?? ""); setSelectedAssetId("") }}>Open folder</Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={() => { setFolderId(selectedAsset.id ?? ""); setSelectedAssetId("") }}>Open folder</Button>
+                  {collectFiles(selectedAsset.id ?? "").length > 0 && (
+                    <Button variant="outline" disabled={downloading} onClick={() => void handleDownloadFolder(selectedAsset)}>
+                      {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                      {downloading ? "Preparing…" : "Download folder"}
+                    </Button>
+                  )}
+                </div>
               </>
             ) : selectedAsset.kind === "doc" ? (
               isAdmin ? (
@@ -704,9 +942,16 @@ export function ProjectAssetsWorkspace({ project, mode }: { project: Project; mo
             )}
             {selectedAsset.notes && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{selectedAsset.notes}</p>}
             {selectedAsset.url && (
-              <Button variant="outline" asChild>
-                <a href={selectedAsset.url} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /> Open</a>
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" asChild>
+                  <a href={selectedAsset.url} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /> Open</a>
+                </Button>
+                {selectedAsset.kind === "file" && (
+                  <Button variant="outline" onClick={() => void triggerDownload(selectedAsset.url!, selectedAsset.label)}>
+                    <Download className="h-4 w-4" /> Download
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         </aside>

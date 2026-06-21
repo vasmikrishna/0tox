@@ -2,7 +2,7 @@ import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { PORTFOLIO_SEED } from "@/lib/portfolio-seed"
 
-export const metadata = { title: "Our Work | NexoIT" }
+export const metadata = { title: "Our Work | 0toX" }
 
 export default function WorkPage() {
   const projects = PORTFOLIO_SEED

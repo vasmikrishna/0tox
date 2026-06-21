@@ -21,7 +21,7 @@ export const PORTFOLIO_SEED: SeedProject[] = [
     category: "IT Support",
     emoji: "🖥️",
     bg: "#1B3A6B",
-    cover: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80",
+    cover: "/images/portfolio-plumbing.png",
     shortDescription:
       "Designed and deployed a business-grade office network for a 12-person plumbing business in Melbourne — UniFi firewall, segmented Wi-Fi, NAS file storage, and automated backups.",
     longDescription:
@@ -39,7 +39,7 @@ export const PORTFOLIO_SEED: SeedProject[] = [
     category: "Web Services",
     emoji: "🌐",
     bg: "#16A34A",
-    cover: "https://images.unsplash.com/photo-1547658719-da2b51169166?auto=format&fit=crop&w=800&q=80",
+    cover: "/images/portfolio-bookkeeping.png",
     shortDescription:
       "Built a clean 6-page website for a Sydney bookkeeping firm in under a week. Mobile-responsive, SEO-optimised, with contact form and Google Maps.",
     longDescription:
@@ -57,7 +57,7 @@ export const PORTFOLIO_SEED: SeedProject[] = [
     category: "Microsoft 365",
     emoji: "☁️",
     bg: "#0078D4",
-    cover: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=800&q=80",
+    cover: "/images/portfolio-lighthouse.png",
     shortDescription:
       "Migrated a 15-person accounting firm from on-premise Exchange to Microsoft 365 Business Premium — zero downtime, full MFA, and conditional access policies.",
     longDescription:
@@ -75,7 +75,7 @@ export const PORTFOLIO_SEED: SeedProject[] = [
     category: "Web Services",
     emoji: "🍜",
     bg: "#DC2626",
-    cover: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=800&q=80",
+    cover: "/images/portfolio-phopalace.png",
     shortDescription:
       "Mobile-first restaurant site with online menu, reservation form, location map, and Instagram feed. Loads in under 1 second on 4G mobile.",
     longDescription:
@@ -93,7 +93,7 @@ export const PORTFOLIO_SEED: SeedProject[] = [
     category: "Web Services",
     emoji: "⚡",
     bg: "#7C3AED",
-    cover: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=800&q=80",
+    cover: "/images/portfolio-tradesclub.png",
     shortDescription:
       "Full-stack web app with member login, Stripe-powered subscriptions, document library, event RSVP, and admin dashboard for a trades industry association.",
     longDescription:
@@ -111,7 +111,7 @@ export const PORTFOLIO_SEED: SeedProject[] = [
     category: "IT Support",
     emoji: "🛒",
     bg: "#0891B2",
-    cover: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=80",
+    cover: "/images/portfolio-coastal.png",
     shortDescription:
       "Comprehensive managed IT support for a 4-location retail chain: 24/7 monitoring, POS maintenance, central endpoint security, and offsite encrypted backups.",
     longDescription:

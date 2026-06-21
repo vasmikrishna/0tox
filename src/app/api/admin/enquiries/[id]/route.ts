@@ -7,6 +7,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!session || session.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  const tenantId = session.tenant_id
 
   try {
     const { id } = await params
@@ -24,6 +25,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       .from("contact_enquiries")
       .update(updates)
       .eq("id", id)
+      .eq("tenant_id", tenantId)
 
     if (error) throw error
     return NextResponse.json({ ok: true })
@@ -38,6 +40,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (!session || session.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  const tenantId = session.tenant_id
 
   try {
     const { id } = await params
@@ -46,6 +49,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
       .from("contact_enquiries")
       .delete()
       .eq("id", id)
+      .eq("tenant_id", tenantId)
 
     if (error) throw error
     return NextResponse.json({ ok: true })

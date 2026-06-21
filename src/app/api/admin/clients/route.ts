@@ -7,6 +7,7 @@ export async function GET() {
   if (!session || session.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  const tenantId = session.tenant_id
 
   try {
     const supabase = createClient()
@@ -14,6 +15,7 @@ export async function GET() {
       .from("users")
       .select("id, name, email, created_at")
       .eq("role", "client")
+      .eq("tenant_id", tenantId)
       .order("name", { ascending: true })
 
     if (error) throw error

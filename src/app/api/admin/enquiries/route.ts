@@ -7,6 +7,7 @@ export async function GET(req: Request) {
   if (!session || session.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  const tenantId = session.tenant_id
 
   try {
     const { searchParams } = new URL(req.url)
@@ -16,6 +17,7 @@ export async function GET(req: Request) {
     let query = (supabase as any)
       .from("contact_enquiries")
       .select("*")
+      .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
 
     if (status && status !== "all") {
@@ -29,6 +31,7 @@ export async function GET(req: Request) {
     const { data: countData } = await (supabase as any)
       .from("contact_enquiries")
       .select("status")
+      .eq("tenant_id", tenantId)
 
     const counts = { new: 0, read: 0, replied: 0, archived: 0, all: 0 }
     for (const row of (countData ?? []) as { status: string }[]) {

@@ -27,20 +27,24 @@ const SERVICE_LABELS: Record<string, string> = {
 }
 
 const STATUS_TABS: { key: keyof Counts; label: string; icon: any }[] = [
+  { key: "all", label: "All", icon: Mail },
   { key: "new", label: "New", icon: Inbox },
   { key: "read", label: "Read", icon: Clock },
   { key: "replied", label: "Replied", icon: Check },
   { key: "archived", label: "Archived", icon: Archive },
-  { key: "all", label: "All", icon: Mail },
 ]
 
 export default function EnquiriesPage() {
   const [enquiries, setEnquiries] = useState<Enquiry[]>([])
   const [counts, setCounts] = useState<Counts>({ new: 0, read: 0, replied: 0, archived: 0, all: 0 })
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<keyof Counts>("new")
+  const [activeTab, setActiveTab] = useState<keyof Counts>("all")
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [search, setSearch] = useState("")
+  
+  const [replying, setReplying] = useState(false)
+  const [replyMessage, setReplyMessage] = useState("")
+  const [sendingReply, setSendingReply] = useState(false)
 
   const load = useCallback(async (tab: keyof Counts = activeTab) => {
     setLoading(true)
@@ -56,6 +60,11 @@ export default function EnquiriesPage() {
 
   useEffect(() => { load(activeTab) }, [activeTab, load])
 
+  useEffect(() => {
+    setReplying(false)
+    setReplyMessage("")
+  }, [selectedId])
+
   async function updateStatus(id: string, status: Enquiry["status"]) {
     await fetch(`/api/admin/enquiries/${id}`, {
       method: "PATCH",
@@ -70,6 +79,30 @@ export default function EnquiriesPage() {
     await fetch(`/api/admin/enquiries/${id}`, { method: "DELETE" })
     setSelectedId(null)
     await load()
+  }
+
+  async function submitReply() {
+    if (!selectedId || !replyMessage.trim()) return
+    setSendingReply(true)
+    try {
+      const res = await fetch(`/api/admin/enquiries/${selectedId}/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ replyMessage }),
+      })
+      if (!res.ok) {
+        const errData = await res.json()
+        alert(errData.error || "Failed to send reply")
+        return
+      }
+      setReplying(false)
+      setReplyMessage("")
+      await load()
+    } catch (err) {
+      alert("Error sending reply")
+    } finally {
+      setSendingReply(false)
+    }
   }
 
   const filtered = search.trim()
@@ -236,13 +269,19 @@ export default function EnquiriesPage() {
 
                 {/* Action bar */}
                 <div className="flex flex-wrap items-center gap-2 mt-4">
+                  <button
+                    onClick={() => setReplying(true)}
+                    className="inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+                    style={{ background: "var(--site-accent, #16A34A)" }}
+                  >
+                    <Reply className="h-3 w-3" /> Reply directly
+                  </button>
                   <a
                     href={`mailto:${selected.email}?subject=Re: Your enquiry`}
                     onClick={() => updateStatus(selected.id, "replied")}
-                    className="inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold text-white"
-                    style={{ background: "var(--site-accent, #16A34A)" }}
+                    className="inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium border border-border hover:bg-accent"
                   >
-                    <Reply className="h-3 w-3" /> Reply via email
+                    Open in Mail client
                   </a>
                   {selected.status !== "replied" && (
                     <button
@@ -278,6 +317,44 @@ export default function EnquiriesPage() {
 
               {/* Body */}
               <div className="p-5 flex-1 overflow-y-auto space-y-5">
+                {replying && (
+                  <div className="border border-border rounded-lg bg-muted/20 p-4 space-y-3">
+                    <p className="text-xs font-medium text-muted-foreground">Drafting reply to {selected.email}:</p>
+                    <textarea
+                      value={replyMessage}
+                      onChange={e => setReplyMessage(e.target.value)}
+                      disabled={sendingReply}
+                      placeholder="Write your email reply here..."
+                      className="w-full min-h-[140px] p-3 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-foreground/20"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={submitReply}
+                        disabled={sendingReply || !replyMessage.trim()}
+                        className="inline-flex items-center justify-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                        style={{ background: "var(--site-accent, #16A34A)" }}
+                      >
+                        {sendingReply ? "Sending..." : "Send Reply"}
+                      </button>
+                      <button
+                        onClick={() => { setReplying(false); setReplyMessage("") }}
+                        disabled={sendingReply}
+                        className="inline-flex items-center justify-center rounded border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {selected.admin_note && (
+                  <Field label="Admin Notes & Reply History">
+                    <div className="whitespace-pre-wrap leading-relaxed text-sm bg-muted/40 p-3 border border-border rounded-lg text-muted-foreground">
+                      {selected.admin_note}
+                    </div>
+                  </Field>
+                )}
+
                 <Field label="Service interested in">
                   {selected.service ? SERVICE_LABELS[selected.service] ?? selected.service : <span className="text-muted-foreground italic">Not specified</span>}
                 </Field>

@@ -1,0 +1,13 @@
+# Netlify build config for the Next.js 16 app.
+# Netlify auto-detects Next.js and uses @netlify/plugin-nextjs; this file pins
+# the build command and Node version so deploys are reproducible.
+
+[build]
+  command = "next build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

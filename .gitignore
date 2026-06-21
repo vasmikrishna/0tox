@@ -36,6 +36,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# netlify
+.netlify
+
+# local demo screenshots (not part of the app)
+/demo-shots/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

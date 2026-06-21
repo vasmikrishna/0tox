@@ -45,9 +45,27 @@ export async function POST(request: Request) {
     ? resourceStage?.projects[0]?.client_id
     : resourceStage?.projects?.client_id
 
-  if (!resourceStage || (session.role !== "admin" && clientId !== session.id)) {
+  let isAuthorized = false
+  if (session.role === "admin") {
+    isAuthorized = true
+  } else if (session.role === "client" && clientId === session.id) {
+    isAuthorized = true
+  } else if (session.role === "employee" && resourceStage) {
+    const { data: assignment } = await supabase
+      .from("project_assignments")
+      .select("id")
+      .eq("project_id", resourceStage.project_id)
+      .eq("employee_id", session.id)
+      .single()
+    if (assignment) {
+      isAuthorized = true
+    }
+  }
+
+  if (!resourceStage || !isAuthorized) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
+
 
   const uploaded = await uploadToR2(file, `projects/${resourceStage.project_id}/stages/${stageId}`)
   const { data, error } = await supabase

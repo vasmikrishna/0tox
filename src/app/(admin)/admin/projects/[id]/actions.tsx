@@ -1,15 +1,18 @@
 "use client"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency, formatDate } from "@/lib/utils"
-import { composeProjectNotes, extractProjectAssets, stripProjectAssets } from "@/lib/project-assets"
-import { CheckCircle2, Circle, Loader2, Plus, Eye, EyeOff, Upload, Sparkles, Pencil, Trash2 } from "lucide-react"
+import { stripProjectAssets, extractProjectAssets, composeProjectNotes } from "@/lib/project-assets"
+import { createClient } from "@/lib/supabase/client"
+
+const JSON_HEADERS = { "Content-Type": "application/json" }
+import { CheckCircle2, Circle, Loader2, Plus, Eye, EyeOff, Upload, Sparkles, Pencil, Trash2, FolderOpen } from "lucide-react"
 import type { Stage, Payment, DeliverableFile, Project, ProjectStatus, PaymentMethod, ServiceTier, StageTemplate } from "@/types"
 
 const PROJECT_STATUSES = ["intake", "review", "active", "completed", "cancelled"] as const
@@ -19,11 +22,10 @@ export function AdminProjectActions({ project }: { project: Project }) {
   const [status, setStatus] = useState(project.status)
   const [saving, setSaving] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
 
   async function updateStatus(newStatus: ProjectStatus) {
     setSaving(true)
-    await supabase.from("projects").update({ status: newStatus, ...(newStatus === "active" ? { started_at: new Date().toISOString() } : {}), ...(newStatus === "completed" ? { completed_at: new Date().toISOString() } : {}) }).eq("id", project.id)
+    await fetch(`/api/admin/projects/${project.id}`, { method: "PATCH", headers: JSON_HEADERS, body: JSON.stringify({ status: newStatus }) })
     setStatus(newStatus)
     setSaving(false)
     router.refresh()
@@ -55,35 +57,36 @@ export function AdminProjectStages({ projectId, serviceTier, stages, templates }
   const [editDesc, setEditDesc] = useState("")
   const [templateDraft, setTemplateDraft] = useState(() => templates.map(template => ({ name: template.name, description: template.description ?? "" })))
   const [uploadingStage, setUploadingStage] = useState<string | null>(null)
-  const supabase = createClient()
   const router = useRouter()
+  const supabase = createClient()
 
   async function addStage() {
     if (!newName) return
-    const { data } = await supabase.from("stages").insert({
-      project_id: projectId, name: newName, description: newDesc,
-      sort_order: items.length + 1, visible_to_client: false, status: "pending"
-    }).select("*, deliverable_files(*)").single()
-    if (data) { setItems(prev => [...prev, data as unknown as Stage & { deliverable_files: DeliverableFile[] }]); setNewName(""); setNewDesc(""); setAdding(false) }
+    const res = await fetch(`/api/admin/projects/${projectId}/stages`, {
+      method: "POST", headers: JSON_HEADERS,
+      body: JSON.stringify({ name: newName, description: newDesc, sort_order: items.length + 1 }),
+    })
+    const { stage: data } = await res.json().catch(() => ({ stage: null }))
+    if (res.ok && data) {
+      setItems(prev => [...prev, data as Stage & { deliverable_files: DeliverableFile[] }])
+      setNewName(""); setNewDesc(""); setAdding(false)
+    }
   }
 
   async function applyTemplate(stagesToApply = templateDraft) {
     const usableStages = stagesToApply
-      .map((stage, index) => ({
-        project_id: projectId,
-        name: stage.name.trim(),
-        description: stage.description.trim() || null,
-        sort_order: index + 1,
-        visible_to_client: false,
-        status: "pending" as const,
-      }))
+      .map((stage, index) => ({ name: stage.name.trim(), description: stage.description.trim() || null, sort_order: index + 1 }))
       .filter(stage => stage.name)
 
     if (!usableStages.length || items.length > 0) return
 
-    const { data } = await supabase.from("stages").insert(usableStages).select("*, deliverable_files(*)").order("sort_order")
-    if (data) {
-      setItems(data as unknown as (Stage & { deliverable_files: DeliverableFile[] })[])
+    const res = await fetch(`/api/admin/projects/${projectId}/stages`, {
+      method: "POST", headers: JSON_HEADERS,
+      body: JSON.stringify({ stages: usableStages }),
+    })
+    const { stages: data } = await res.json().catch(() => ({ stages: null }))
+    if (res.ok && data) {
+      setItems(data as (Stage & { deliverable_files: DeliverableFile[] })[])
       setCustomizingTemplate(false)
       router.refresh()
     }
@@ -102,7 +105,7 @@ export function AdminProjectStages({ projectId, serviceTier, stages, templates }
   }
 
   async function updateStage(stageId: string, updates: Partial<Stage>) {
-    await supabase.from("stages").update(updates).eq("id", stageId)
+    await fetch(`/api/admin/projects/${projectId}/stages/${stageId}`, { method: "PATCH", headers: JSON_HEADERS, body: JSON.stringify(updates) })
     setItems(prev => prev.map(s => s.id === stageId ? { ...s, ...updates } : s))
     router.refresh()
   }
@@ -122,10 +125,60 @@ export function AdminProjectStages({ projectId, serviceTier, stages, templates }
   }
 
   async function deleteStage(stageId: string) {
+    const stage = items.find(s => s.id === stageId)
+    if (!stage) return
+
+    // 1. If there are deliverables, preserve them by converting to standard assets
+    if (stage.deliverable_files && stage.deliverable_files.length > 0) {
+      const { data: project } = await supabase
+        .from("projects")
+        .select("admin_notes, project_links")
+        .eq("id", projectId)
+        .single()
+
+      if (project) {
+        const regularAssets = extractProjectAssets(project.admin_notes)
+        const newFolderId = `folder-${Date.now()}`
+        const preservedFolder = {
+          id: newFolderId,
+          label: stage.name,
+          url: "",
+          type: "folder" as const,
+          kind: "folder" as const,
+          folder_id: "",
+          visible_to_client: stage.visible_to_client,
+          created_at: new Date().toISOString()
+        }
+        const preservedFiles = stage.deliverable_files.map(file => ({
+          id: file.id,
+          label: file.name,
+          url: file.url,
+          type: "file" as const,
+          kind: "file" as const,
+          folder_id: newFolderId,
+          visible_to_client: stage.visible_to_client,
+          size: file.size,
+          created_at: file.uploaded_at
+        }))
+
+        const nextAssets = [preservedFolder, ...preservedFiles, ...regularAssets]
+        await supabase
+          .from("projects")
+          .update({
+            admin_notes: composeProjectNotes(project.admin_notes, nextAssets),
+            project_links: nextAssets
+          })
+          .eq("id", projectId)
+      }
+    }
+
+    // 2. Delete the stage from database
     await supabase.from("stages").delete().eq("id", stageId)
-    setItems(prev => prev.filter(stage => stage.id !== stageId))
+    setItems(prev => prev.filter(s => s.id !== stageId))
+    void fetch("/api/audit/log", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId, action: "stage.deleted", entityType: "stage", entityId: stageId, changes: { name: { old: stage?.name, new: null } } }) })
     router.refresh()
   }
+
 
   async function markComplete(stageId: string) {
     const updates = { status: "completed" as const, completed_at: new Date().toISOString(), visible_to_client: true }
@@ -238,6 +291,19 @@ export function AdminProjectStages({ projectId, serviceTier, stages, templates }
                 <div className="flex-1">
                   <p className="font-medium text-sm">{stage.name}</p>
                   {stage.description && <p className="mt-0.5 text-xs text-muted-foreground">{stage.description}</p>}
+                  {typeof window !== "undefined" && (
+                    <Link
+                      href={
+                        window.location.pathname.startsWith("/employee")
+                          ? `/employee/projects/${projectId}/assets?folder_id=${stage.id}`
+                          : `/admin/projects/${projectId}/assets?folder_id=${stage.id}`
+                      }
+                      className="inline-flex items-center gap-1.5 text-xs text-brand hover:underline mt-1 bg-brand/5 border border-brand/10 hover:bg-brand/10 transition rounded px-2 py-0.5 w-fit"
+                    >
+                      <FolderOpen className="h-3 w-3 text-brand" />
+                      View stage folder in assets
+                    </Link>
+                  )}
                 </div>
               )}
               <button
@@ -326,12 +392,18 @@ export function AdminProjectPayments({ projectId, payments }: { projectId: strin
       project_id: projectId, label: form.label, amount: parseFloat(form.amount),
       method: form.method, due_date: form.due_date || null, status: "pending"
     }).select().single()
-    if (data) { setItems(prev => [...prev, data as unknown as Payment]); setForm({ label: "", amount: "", method: "stripe", due_date: "" }); setAdding(false) }
+    if (data) {
+      setItems(prev => [...prev, data as unknown as Payment])
+      setForm({ label: "", amount: "", method: "stripe", due_date: "" }); setAdding(false)
+      void fetch("/api/audit/log", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId, action: "payment.created", entityType: "payment", entityId: (data as any).id, changes: { label: { old: null, new: form.label }, amount: { old: null, new: form.amount } } }) })
+    }
   }
 
   async function markPaid(paymentId: string) {
+    const payment = items.find(p => p.id === paymentId)
     await supabase.from("payments").update({ status: "paid", paid_at: new Date().toISOString() }).eq("id", paymentId)
     setItems(prev => prev.map(p => p.id === paymentId ? { ...p, status: "paid" as const, paid_at: new Date().toISOString() } : p))
+    void fetch("/api/audit/log", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId, action: "payment.marked_paid", entityType: "payment", entityId: paymentId, changes: { status: { old: payment?.status, new: "paid" } } }) })
   }
 
   const paymentBadge = (status: Payment["status"]) => ({ pending: "warning", paid: "success", overdue: "destructive" } as const)[status] ?? "default"

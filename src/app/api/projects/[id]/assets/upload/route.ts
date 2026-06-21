@@ -7,11 +7,33 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession()
-  if (session?.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
   const { id } = await params
+  const supabase = createClient()
+
+  // 1. Authorize: Admin or assigned Employee
+  let isAuthorized = false
+  if (session.role === "admin") {
+    isAuthorized = true
+  } else if (session.role === "employee") {
+    const { data: assignment } = await supabase
+      .from("project_assignments")
+      .select("id")
+      .eq("project_id", id)
+      .eq("employee_id", session.id)
+      .single()
+    if (assignment) {
+      isAuthorized = true
+    }
+  }
+
+  if (!isAuthorized) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
+
   const formData = await request.formData()
   const file = formData.get("file")
 
@@ -23,7 +45,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "File must be 50MB or smaller" }, { status: 413 })
   }
 
-  const supabase = createClient()
   const { data: project } = await supabase.from("projects").select("id").eq("id", id).single()
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 })

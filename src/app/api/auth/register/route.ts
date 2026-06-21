@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createSession } from "@/lib/session"
+import { getTenantSlug, getTenantBySlug } from "@/lib/tenant"
 
 export async function POST(req: Request) {
   const { name, email, password } = await req.json()
@@ -18,12 +19,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Database not configured" }, { status: 503 })
   }
 
+  const slug = await getTenantSlug()
+  const tenant = await getTenantBySlug(slug)
+  if (!tenant) return NextResponse.json({ error: "Tenant not found" }, { status: 404 })
+
   try {
     const { createClient } = await import("@supabase/supabase-js")
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Check if email already exists
-    const { data: existing } = await supabase.from("users").select("id").eq("email", email).single()
+    const { data: existing } = await supabase.from("users").select("id").eq("email", email).eq("tenant_id", tenant.id).single()
     if (existing) {
       return NextResponse.json({ error: "An account with this email already exists" }, { status: 409 })
     }
@@ -33,8 +37,8 @@ export async function POST(req: Request) {
 
     const { data: user, error } = await supabase
       .from("users")
-      .insert({ name, email, password_hash, role: "client" })
-      .select("id, email, name, role")
+      .insert({ name, email, password_hash, role: "client", tenant_id: tenant.id })
+      .select("id, email, name, role, tenant_id")
       .single()
 
     if (error || !user) {
@@ -45,7 +49,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: msg }, { status: 500 })
     }
 
-    await createSession({ id: user.id, email: user.email, name: user.name, role: "client" })
+    await createSession({ id: user.id, email: user.email, name: user.name, role: "client", tenant_id: tenant.id })
     return NextResponse.json({ role: "client" })
   } catch {
     return NextResponse.json({ error: "Failed to create account" }, { status: 500 })

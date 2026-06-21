@@ -1,4 +1,4 @@
-import type { Project, Stage, Payment, PortfolioItem, User } from "@/types"
+import type { Project, Stage, Payment, PortfolioItem, User, Product, Order, CustomPage } from "@/types"
 
 export const MOCK_CLIENTS: User[] = [
   { id: "u1", email: "alex@burgerking.com", name: "Alex Johnson", role: "client", created_at: "2026-04-10T09:00:00Z" },
@@ -43,6 +43,23 @@ export const MOCK_PORTFOLIO: PortfolioItem[] = [
   { id: "port1", title: "Burger King Fan Site", description: "Fast 5-page brochure site with menu and contact form.", service_tier: "starter", tags: ["Next.js", "Tailwind", "Vercel"], image_url: "https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=800&q=80", live_url: "https://burgerking.com", visible: true, sort_order: 1, created_at: "2026-04-16T16:00:00Z" },
   { id: "port2", title: "TechFlow SaaS", description: "Full web app with auth, dashboard, and Stripe payments.", service_tier: "pro", tags: ["Next.js", "Supabase", "Stripe"], image_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80", live_url: "https://techflow.io", visible: true, sort_order: 2, created_at: "2026-05-01T12:00:00Z" },
   { id: "port3", title: "Zenko Yoga Studio", description: "Multi-page site with class booking and CMS.", service_tier: "standard", tags: ["Next.js", "Contentlayer", "Booking"], image_url: "https://images.unsplash.com/photo-1588286840104-8957b019727f?w=800&q=80", live_url: "https://zenkoyoga.com.au", visible: true, sort_order: 3, created_at: "2026-03-20T10:00:00Z" },
+]
+
+export const MOCK_PRODUCTS: Product[] = [
+  { id: "prod1", name: "Starter Tee", slug: "starter-tee", description: "Soft cotton t-shirt with the studio logo.", price: 29, sale_price: 24, sku: "TEE-001", stock_quantity: 42, manage_stock: true, status: "active", image_url: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&q=80", images: [], category: "Apparel", sort_order: 1, created_at: "2026-05-10T10:00:00Z" },
+  { id: "prod2", name: "Enamel Mug", slug: "enamel-mug", description: "350ml enamel mug, dishwasher safe.", price: 18, sale_price: null, sku: "MUG-001", stock_quantity: 7, manage_stock: true, status: "active", image_url: "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=800&q=80", images: [], category: "Drinkware", sort_order: 2, created_at: "2026-05-12T10:00:00Z" },
+  { id: "prod3", name: "Sticker Pack", slug: "sticker-pack", description: "Set of 6 vinyl stickers.", price: 9, sale_price: null, sku: "STK-001", stock_quantity: 0, manage_stock: true, status: "active", image_url: "https://images.unsplash.com/photo-1572375992501-4b0892d50c69?w=800&q=80", images: [], category: "Accessories", sort_order: 3, created_at: "2026-05-15T10:00:00Z" },
+  { id: "prod4", name: "Limited Hoodie", slug: "limited-hoodie", description: "Heavyweight hoodie — draft, not yet published.", price: 65, sale_price: null, sku: "HOOD-001", stock_quantity: 15, manage_stock: true, status: "draft", image_url: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=800&q=80", images: [], category: "Apparel", sort_order: 4, created_at: "2026-05-18T10:00:00Z" },
+]
+
+export const MOCK_ORDERS: (Order & { items: any[] })[] = [
+  { id: "ord1", customer_name: "Jamie Lee", customer_email: "jamie@example.com", total: 53, currency: "usd", status: "paid", paid_at: "2026-06-01T12:00:00Z", created_at: "2026-06-01T11:55:00Z", items: [ { id: "oi1", order_id: "ord1", product_id: "prod1", name: "Starter Tee", price: 24, quantity: 1 }, { id: "oi2", order_id: "ord1", product_id: "prod2", name: "Enamel Mug", price: 18, quantity: 1 } ] },
+  { id: "ord2", customer_name: "Morgan Diaz", customer_email: "morgan@example.com", total: 24, currency: "usd", status: "pending", created_at: "2026-06-03T09:20:00Z", items: [ { id: "oi3", order_id: "ord2", product_id: "prod1", name: "Starter Tee", price: 24, quantity: 1 } ] },
+]
+
+export const MOCK_CUSTOM_PAGES: CustomPage[] = [
+  { id: "page1", slug: "welcome", title: "Welcome", html: "<section style=\"padding:80px 24px;text-align:center\"><h1>Welcome</h1><p>This is a sample custom page.</p></section>", css: "", template: "landing", status: "published", is_homepage: false, created_at: "2026-05-20T10:00:00Z" },
+  { id: "page2", slug: "launch", title: "Launch Teaser", html: "<section style=\"padding:80px 24px;text-align:center\"><h1>Coming soon</h1></section>", css: "", template: "coming-soon", status: "draft", is_homepage: false, created_at: "2026-05-22T10:00:00Z" },
 ]
 
 export const MOCK_INTAKE_RESPONSES = [

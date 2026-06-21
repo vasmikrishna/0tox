@@ -7,6 +7,7 @@ import { extractProjectAssets, normalizeProjectAssets } from "@/lib/project-asse
 import { defaultStageTemplatesFor } from "@/lib/stage-template-defaults"
 import { formatDate } from "@/lib/utils"
 import { AdminProjectActions, AdminProjectStages, AdminProjectPayments, AdminProjectNotes } from "./actions"
+import { AdminProjectAssignments } from "./assignments"
 import type { Project, Stage, Payment, IntakeResponse, DeliverableFile, User, StageTemplate } from "@/types"
 import { MOCK_PROJECTS, MOCK_STAGES, MOCK_PAYMENTS, MOCK_INTAKE_RESPONSES } from "@/lib/mock-data"
 import { FolderOpen } from "lucide-react"
@@ -68,7 +69,9 @@ export default async function AdminProjectPage({ params }: { params: Promise<{ i
   const status = statusConfig[project.status as keyof typeof statusConfig]
   const client = project.users
   const projectAssets = extractProjectAssets(project.admin_notes)
-  const assetCount = normalizeProjectAssets(project.project_links?.length ? project.project_links : projectAssets).length
+  const deliverableCount = stages.reduce((sum, s) => sum + (s.deliverable_files?.length ?? 0), 0)
+  const linkCount = normalizeProjectAssets(project.project_links?.length ? project.project_links : projectAssets).length
+  const assetCount = linkCount + deliverableCount
 
   return (
     <div className="space-y-8">
@@ -129,6 +132,8 @@ export default async function AdminProjectPage({ params }: { params: Promise<{ i
 
           <AdminProjectPayments projectId={id} payments={payments} />
 
+          <AdminProjectAssignments projectId={id} />
+
           {/* Admin notes */}
           <Card>
             <CardHeader><CardTitle className="text-base">Internal notes</CardTitle></CardHeader>
@@ -136,6 +141,12 @@ export default async function AdminProjectPage({ params }: { params: Promise<{ i
               <AdminProjectNotes projectId={id} initialNotes={project.admin_notes ?? ""} />
             </CardContent>
           </Card>
+
+          <div className="flex justify-end">
+            <Button size="sm" variant="outline" asChild>
+              <Link href={`/admin/projects/${id}/changelog`}>View changelog</Link>
+            </Button>
+          </div>
         </div>
       </div>
     </div>

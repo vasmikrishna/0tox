@@ -10,7 +10,8 @@ export type SessionPayload = {
   id: string
   email: string
   name: string
-  role: "admin" | "client"
+  role: "admin" | "client" | "employee"
+  tenant_id: string
 }
 
 export async function createSession(payload: SessionPayload) {

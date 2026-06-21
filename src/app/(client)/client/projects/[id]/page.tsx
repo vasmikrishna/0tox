@@ -31,6 +31,44 @@ const paymentStatusConfig = {
   overdue: { label: "Overdue", variant: "destructive" as const },
 }
 
+function formatLogMessage(log: any) {
+  const emailLabel = log.user_email ? `by ${log.user_email.split("@")[0]}` : ""
+  
+  switch (log.action) {
+    case "project.created":
+      return `Project created`
+    case "project.status_changed": {
+      const status = log.changes?.status?.new || "updated"
+      const displayStatus = status === "intake" ? "submitted" : status === "active" ? "in progress" : status
+      return `Project status changed to ${displayStatus} ${emailLabel}`
+    }
+    case "project.updated":
+      return `Project details updated ${emailLabel}`
+    case "stage.created":
+      return `New stage added: "${log.changes?.name?.new || "Untitled"}" ${emailLabel}`
+    case "stage.updated": {
+      const name = log.changes?.name?.new || log.changes?.name?.old || "Stage"
+      const status = log.changes?.status?.new
+      if (status) {
+        return `Stage "${name}" status updated to ${status.replace("_", " ")} ${emailLabel}`
+      }
+      return `Stage "${name}" updated ${emailLabel}`
+    }
+    case "stage.deleted":
+      return `Stage "${log.changes?.name?.old || "Stage"}" deleted ${emailLabel}`
+    case "stage.completed":
+      return `Stage completed: "${log.changes?.name?.new || log.changes?.name?.old || "Stage"}"`
+    case "stage.started":
+      return `Stage started: "${log.changes?.name?.new || log.changes?.name?.old || "Stage"}"`
+    case "deliverable.uploaded":
+      return `Deliverable uploaded: "${log.changes?.name?.new || "file"}" ${emailLabel}`
+    case "deliverable.deleted":
+      return `Deliverable removed: "${log.changes?.name?.old || "file"}" ${emailLabel}`
+    default:
+      return `${log.action.replace(".", " ")} ${emailLabel}`
+  }
+}
+
 const supabaseConfigured = () =>
   process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http") &&
   !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -41,6 +79,7 @@ export default async function ClientProjectPage({ params }: { params: Promise<{ 
   let project: Project | null = null
   let stages: (Stage & { deliverable_files: DeliverableFile[] })[] = []
   let payments: Payment[] = []
+  let logs: any[] = []
 
   if (supabaseConfigured()) {
     try {
@@ -54,25 +93,45 @@ export default async function ClientProjectPage({ params }: { params: Promise<{ 
       project = p as unknown as Project | null
       if (!project) notFound()
 
-      const [{ data: s }, { data: pay }] = await Promise.all([
+      const [{ data: s }, { data: pay }, { data: logData }] = await Promise.all([
         supabase.from("stages").select("*, deliverable_files(*)").eq("project_id", id).eq("visible_to_client", true).order("sort_order"),
         supabase.from("payments").select("*").eq("project_id", id).order("created_at"),
+        supabase.from("audit_logs").select("*").eq("project_id", id).order("created_at", { ascending: false }).limit(20)
       ])
       stages = (s ?? []) as unknown as (Stage & { deliverable_files: DeliverableFile[] })[]
       payments = (pay ?? []) as unknown as Payment[]
+      logs = logData ?? []
     } catch { notFound() }
   } else {
     const found = MOCK_PROJECTS.find(p => p.id === id) ?? MOCK_PROJECTS[1]
     project = found
     stages = MOCK_STAGES.filter(s => s.project_id === found.id && s.visible_to_client)
     payments = MOCK_PAYMENTS.filter(p => p.project_id === found.id)
+    logs = [
+      {
+        id: "mock-log-1",
+        project_id: id,
+        action: "project.created",
+        user_email: "ckrishna@startensystems.com",
+        created_at: new Date(Date.now() - 3600000 * 24 * 3).toISOString()
+      },
+      {
+        id: "mock-log-2",
+        project_id: id,
+        action: "project.status_changed",
+        user_email: "ckrishna@startensystems.com",
+        changes: { status: { new: "active" } },
+        created_at: new Date(Date.now() - 3600000 * 24 * 2).toISOString()
+      }
+    ]
   }
 
   if (!project) notFound()
 
   const status = statusConfig[project.status as keyof typeof statusConfig]
   const tierLabel: Record<string, string> = { starter: "Starter", standard: "Standard", pro: "Pro" }
-  const assetCount = visibleProjectAssets(project.project_links?.length ? project.project_links : extractProjectAssets(project.admin_notes)).length
+  const deliverableCount = stages.reduce((sum, s) => sum + (s.deliverable_files?.length ?? 0), 0)
+  const assetCount = visibleProjectAssets(project.project_links?.length ? project.project_links : extractProjectAssets(project.admin_notes)).length + deliverableCount
 
   return (
     <div className="space-y-8">
@@ -97,60 +156,97 @@ export default async function ClientProjectPage({ params }: { params: Promise<{ 
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Stages */}
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-lg font-semibold">Project stages</h2>
-          {!stages?.length ? (
-            <Card className="border-dashed">
-              <CardContent className="py-10 text-center text-muted-foreground text-sm">
-                Stages will appear here once your project is active
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {stages.map((stage: Stage & { deliverable_files: DeliverableFile[] }) => (
-                <Card key={stage.id} className={cn(stage.status === "in_progress" && "border-foreground/30")}>
-                  <CardContent className="py-4 px-5">
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5 flex-shrink-0">{stageIcon[stage.status]}</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className={cn("font-medium text-sm", stage.status === "pending" && "text-muted-foreground")}>{stage.name}</p>
-                          {stage.status === "completed" && stage.completed_at && (
-                            <span className="text-xs text-muted-foreground flex-shrink-0">Done {formatDate(stage.completed_at)}</span>
-                          )}
-                          {stage.status === "in_progress" && (
-                            <Badge variant="brand" className="text-xs flex-shrink-0">Active</Badge>
+        {/* Stages & Activity Feed */}
+        <div className="lg:col-span-2 space-y-8">
+          
+          {/* Project Stages Card */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold">Project stages</h2>
+            {!stages?.length ? (
+              <Card className="border-dashed">
+                <CardContent className="py-10 text-center text-muted-foreground text-sm">
+                  Stages will appear here once your project is active
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {stages.map((stage: Stage & { deliverable_files: DeliverableFile[] }) => (
+                  <Card key={stage.id} className={cn(stage.status === "in_progress" && "border-foreground/30")}>
+                    <CardContent className="py-4 px-5">
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5 flex-shrink-0">{stageIcon[stage.status]}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className={cn("font-medium text-sm", stage.status === "pending" && "text-muted-foreground")}>{stage.name}</p>
+                            {stage.status === "completed" && stage.completed_at && (
+                              <span className="text-xs text-muted-foreground flex-shrink-0">Done {formatDate(stage.completed_at)}</span>
+                            )}
+                            {stage.status === "in_progress" && (
+                              <Badge variant="brand" className="text-xs flex-shrink-0">Active</Badge>
+                            )}
+                          </div>
+                          {stage.description && <p className="text-xs text-muted-foreground mt-0.5">{stage.description}</p>}
+                          <Link
+                            href={`/client/projects/${project.id}/assets?folder_id=${stage.id}`}
+                            className="inline-flex items-center gap-1.5 text-xs text-brand hover:underline mt-2.5 bg-brand/5 border border-brand/10 hover:bg-brand/10 transition rounded px-2.5 py-1 w-fit"
+                          >
+                            <FolderOpen className="h-3 w-3 text-brand" />
+                            Open stage folder in assets
+                          </Link>
+                          {stage.deliverable_files && stage.deliverable_files.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              {stage.deliverable_files.map((file: DeliverableFile) => (
+                                <a
+                                  key={file.id}
+                                  href={file.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-2 text-xs bg-muted rounded-md px-3 py-2 hover:bg-accent transition-colors w-fit"
+                                >
+                                  <Download className="h-3 w-3" />
+                                  {file.name}
+                                  <ExternalLink className="h-3 w-3 opacity-50" />
+                                </a>
+                              ))}
+                            </div>
                           )}
                         </div>
-                        {stage.description && <p className="text-xs text-muted-foreground mt-0.5">{stage.description}</p>}
-                        {stage.deliverable_files && stage.deliverable_files.length > 0 && (
-                          <div className="mt-3 space-y-2">
-                            {stage.deliverable_files.map((file: DeliverableFile) => (
-                              <a
-                                key={file.id}
-                                href={file.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-2 text-xs bg-muted rounded-md px-3 py-2 hover:bg-accent transition-colors w-fit"
-                              >
-                                <Download className="h-3 w-3" />
-                                {file.name}
-                                <ExternalLink className="h-3 w-3 opacity-50" />
-                              </a>
-                            ))}
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Activity Feed Card */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold">Project activity</h2>
+            <Card>
+              <CardContent className="py-5 px-6">
+                {!logs?.length ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No activity logged yet</p>
+                ) : (
+                  <div className="relative border-l border-border pl-4 space-y-5">
+                    {logs.map((log) => (
+                      <div key={log.id} className="relative text-sm">
+                        {/* Timeline Dot */}
+                        <span className="absolute -left-[21px] top-1 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-border ring-4 ring-background" />
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                          <p className="font-medium text-foreground">{formatLogMessage(log)}</p>
+                          <span className="text-xs text-muted-foreground flex-shrink-0">{formatDate(log.created_at)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
         </div>
 
-        {/* Payments */}
+        {/* Payments & Assets */}
         <div className="space-y-4">
           <div className="space-y-3">
             <h2 className="text-lg font-semibold">Project assets</h2>

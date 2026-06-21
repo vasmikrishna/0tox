@@ -44,7 +44,7 @@ const defaultServices: Service[] = [
     active: true,
   },
 ]
-const LOCAL_SERVICES_KEY = "nexoit_custom_services"
+const LOCAL_SERVICES_KEY = "0tox_custom_services"
 
 function readLocalServices() {
   if (typeof window === "undefined") return []

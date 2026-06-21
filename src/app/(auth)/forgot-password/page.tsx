@@ -37,7 +37,7 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center space-y-2">
-          <Link href="/" className="text-2xl font-bold tracking-tight">NexoIT</Link>
+          <Link href="/" className="text-2xl font-bold tracking-tight">0toX</Link>
           <h1 className="text-lg font-semibold">Reset your password</h1>
           <p className="text-muted-foreground text-sm">Enter your email and we&apos;ll send a reset link</p>
         </div>

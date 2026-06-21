@@ -1,4 +1,4 @@
-import type { ProjectLink } from "@/types"
+import type { ProjectLink, Stage, DeliverableFile } from "@/types"
 
 const ASSET_MARKER_START = "\n\n<!-- 0TOX_PROJECT_ASSETS:"
 const ASSET_MARKER_END = " -->"
@@ -49,6 +49,7 @@ export function normalizeProjectAssets(links: ProjectLink[] | null | undefined) 
       size: typeof asset.size === "number" ? asset.size : undefined,
       mime_type: typeof asset.mime_type === "string" ? asset.mime_type : "",
       created_at: typeof asset.created_at === "string" ? asset.created_at : "",
+      stage_id: typeof asset.stage_id === "string" ? asset.stage_id : undefined,
     } satisfies ProjectLink]
   })
 }
@@ -90,3 +91,68 @@ export function composeProjectNotes(adminNotes: string | null | undefined, asset
   const encoded = Buffer.from(JSON.stringify(normalizeProjectAssets(assets)), "utf8").toString("base64url")
   return `${visibleNotes}${ASSET_MARKER_START}${encoded}${ASSET_MARKER_END}`
 }
+
+export function mergeStageDeliverables(
+  assets: ProjectLink[],
+  stages: (Stage & { deliverable_files?: DeliverableFile[] })[]
+): ProjectLink[] {
+  const normalizedAssets = normalizeProjectAssets(assets)
+  const stageAssets: ProjectLink[] = []
+
+  for (const stage of stages) {
+    // 1. Add the stage folder
+    stageAssets.push({
+      id: stage.id,
+      label: stage.name,
+      url: "",
+      type: "folder",
+      kind: "folder",
+      folder_id: "", // Root of workspace
+      visible_to_client: stage.visible_to_client,
+      created_at: stage.completed_at || new Date().toISOString(),
+      stage_id: stage.id,
+    })
+
+    // 2. Add the deliverables inside the stage folder
+    if (stage.deliverable_files) {
+      for (const file of stage.deliverable_files) {
+        stageAssets.push({
+          id: file.id,
+          label: file.name,
+          url: file.url,
+          type: "file",
+          kind: "file",
+          folder_id: stage.id, // Put inside the stage folder
+          visible_to_client: stage.visible_to_client,
+          size: file.size,
+          created_at: file.uploaded_at,
+          stage_id: stage.id,
+        })
+      }
+    }
+  }
+
+  // Filter out any assets in the existing assets list that have a stage_id to avoid duplication
+  const filteredNormalAssets = normalizedAssets.filter(asset => !asset.stage_id)
+
+  return [...stageAssets, ...filteredNormalAssets]
+}
+
+export function isImageAsset(asset: ProjectLink) {
+  if (asset.mime_type?.startsWith("image/")) return true
+  const imageRegex = /\.(png|jpe?g|gif|webp|svg|bmp|ico)$/i
+  return (
+    imageRegex.test(asset.url ?? "") ||
+    imageRegex.test(asset.label ?? "")
+  )
+}
+
+export function isPdfAsset(asset: ProjectLink) {
+  if (asset.mime_type === "application/pdf") return true
+  const pdfRegex = /\.pdf$/i
+  return (
+    pdfRegex.test(asset.url ?? "") ||
+    pdfRegex.test(asset.label ?? "")
+  )
+}
+

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSession } from "@/lib/session"
 import { createClient } from "@/lib/supabase/server"
+import { logChange } from "@/lib/audit"
 import type { ServiceTier } from "@/types"
 import { randomBytes } from "node:crypto"
 
@@ -9,6 +10,7 @@ export async function POST(request: Request) {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  const tenantId = session.tenant_id
 
   const body = await request.json()
   const title = typeof body.title === "string" ? body.title.trim() : ""
@@ -36,6 +38,7 @@ export async function POST(request: Request) {
         .from("users")
         .select("id")
         .eq("id", existingClientId)
+        .eq("tenant_id", tenantId)
         .single()
       if (!existing) {
         return NextResponse.json({ error: "Selected client not found" }, { status: 404 })
@@ -47,6 +50,7 @@ export async function POST(request: Request) {
         .from("users")
         .select("id")
         .eq("email", inviteEmail)
+        .eq("tenant_id", tenantId)
         .maybeSingle()
 
       if (byEmail) {
@@ -62,6 +66,7 @@ export async function POST(request: Request) {
             name: inviteName,
             password_hash,
             role: "client",
+            tenant_id: tenantId,
           })
           .select("id")
           .single()
@@ -80,6 +85,7 @@ export async function POST(request: Request) {
       .from("users")
       .select("id")
       .eq("id", session.id)
+      .eq("tenant_id", tenantId)
       .single()
     if (!user) {
       return NextResponse.json({ error: "Client profile not found" }, { status: 404 })
@@ -89,13 +95,23 @@ export async function POST(request: Request) {
 
   const { data: project, error } = await (supabase as any)
     .from("projects")
-    .insert({ client_id: clientId, title, service_tier: serviceTier, status: "intake" })
+    .insert({ client_id: clientId, title, service_tier: serviceTier, status: "intake", tenant_id: tenantId })
     .select()
     .single()
 
   if (error || !project) {
     return NextResponse.json({ error: error?.message ?? "Failed to create project" }, { status: 500 })
   }
+
+  await logChange({
+    projectId: project.id,
+    userId: session.id,
+    userEmail: session.email,
+    action: "project.created",
+    entityType: "project",
+    entityId: project.id,
+    changes: { title: { old: null, new: title }, service_tier: { old: null, new: serviceTier } },
+  })
 
   const questionIds = Object.keys(answers).filter(id => !id.includes("-default-"))
   const responses = questionIds
@@ -117,12 +133,12 @@ export async function POST(request: Request) {
   if (invitedClient && process.env.RESEND_API_KEY) {
     try {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ""
-      const fromEmail = process.env.RESEND_FROM_EMAIL ?? "noreply@nexoit.com.au"
+      const fromEmail = process.env.RESEND_FROM_EMAIL ?? "noreply@0tox.com"
       const html = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
-          <h2 style="color: #1B3A6B;">You've been added to a project at NexoIT</h2>
+          <h2 style="color: #1B3A6B;">You've been added to a project at 0toX</h2>
           <p>Hi ${escapeHtml(body.client_name ?? "")},</p>
-          <p>An admin has started a project for you on the NexoIT client portal. You can log in to view progress, answer intake questions, and download deliverables.</p>
+          <p>An admin has started a project for you on the 0toX client portal. You can log in to view progress, answer intake questions, and download deliverables.</p>
           <div style="background: #f8f9fa; border-radius: 8px; padding: 16px; margin: 20px 0;">
             <p style="margin: 0 0 8px;"><strong>Email:</strong> ${escapeHtml(invitedClient.email)}</p>
             <p style="margin: 0;"><strong>Temporary password:</strong> <code style="background: #fff; padding: 2px 6px; border: 1px solid #e5e7eb; border-radius: 4px;">${escapeHtml(invitedClient.tempPassword)}</code></p>
@@ -131,7 +147,7 @@ export async function POST(request: Request) {
           <p>
             <a href="${appUrl}/login" style="display: inline-block; background: #16A34A; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600;">Log in to the portal</a>
           </p>
-          <p style="color: #6b7280; font-size: 12px; margin-top: 24px;">— The NexoIT team</p>
+          <p style="color: #6b7280; font-size: 12px; margin-top: 24px;">— The 0toX team</p>
         </div>
       `
       await fetch("https://api.resend.com/emails", {
@@ -141,9 +157,9 @@ export async function POST(request: Request) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: `NexoIT <${fromEmail}>`,
+          from: `0toX <${fromEmail}>`,
           to: [invitedClient.email],
-          subject: "Welcome to NexoIT — your project has been started",
+          subject: "Welcome to 0toX — your project has been started",
           html,
         }),
       })
