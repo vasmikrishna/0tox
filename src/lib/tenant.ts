@@ -13,6 +13,7 @@ export interface Tenant {
   primary_color: string
   contact_email?: string
   settings?: Record<string, unknown>
+  onboarding_complete?: boolean
   created_at: string
 }
 
@@ -30,6 +31,17 @@ export const getTenantBySlug = cache(async (slug: string): Promise<Tenant | null
     .select("*")
     .eq("slug", slug)
     .eq("status", "active")
+    .maybeSingle()
+  return data ?? null
+})
+
+/** Resolve a tenant by id — cached per request via React cache(). */
+export const getTenantById = cache(async (id: string): Promise<Tenant | null> => {
+  const supabase = createClient()
+  const { data } = await (supabase as any)
+    .from("tenants")
+    .select("*")
+    .eq("id", id)
     .maybeSingle()
   return data ?? null
 })

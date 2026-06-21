@@ -1,10 +1,17 @@
 import { redirect } from "next/navigation"
 import { getSession } from "@/lib/session"
+import { getTenantById } from "@/lib/tenant"
 import { PortalSidebar } from "@/components/shared/portal-sidebar"
 
 export default async function ClientLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession()
   if (!session) redirect("/login")
+
+  // Self-serve owners can't reach the portal until they've published their site.
+  if (session.tenant_id) {
+    const tenant = await getTenantById(session.tenant_id)
+    if (tenant && tenant.onboarding_complete === false) redirect("/build")
+  }
 
   return (
     <div className="flex min-h-screen">

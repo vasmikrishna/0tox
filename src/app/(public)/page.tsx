@@ -142,7 +142,7 @@ export default async function LandingPage() {
           </nav>
           <div className="flex items-center gap-3">
             <Button asChild variant="ghost" size="sm"><Link href="/login">Sign in</Link></Button>
-            <Button asChild variant="brand" size="sm"><Link href="/register">Get started</Link></Button>
+            <Button asChild variant="brand" size="sm"><Link href="/start">Get started</Link></Button>
           </div>
         </div>
       </header>
@@ -158,7 +158,7 @@ export default async function LandingPage() {
         </p>
         <div className="flex items-center justify-center gap-4 mt-10">
           <Button asChild variant="brand" size="lg">
-            <Link href="/register">Create your website <ArrowRight className="h-4 w-4" /></Link>
+            <Link href="/start">Create your website <ArrowRight className="h-4 w-4" /></Link>
           </Button>
           <Button asChild variant="outline" size="lg">
             <a href="#portfolio">See examples</a>
@@ -203,7 +203,7 @@ export default async function LandingPage() {
                     <p className="text-2xl font-bold mt-3">{service.price}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">{service.price_note}</p>
                     <Button asChild variant={service.highlight ? "brand" : "outline"} size="sm" className="w-full mt-4">
-                      <Link href="/register">Create your website <ArrowRight className="h-3 w-3" /></Link>
+                      <Link href="/start">Create your website <ArrowRight className="h-3 w-3" /></Link>
                     </Button>
                   </div>
                 </CardContent>
@@ -245,7 +245,7 @@ export default async function LandingPage() {
                   </div>
                   {plan.available ? (
                     <Button asChild variant="brand" size="sm" className="w-full" data-testid={`plan-${plan.name.toLowerCase()}-cta`}>
-                      <Link href="/register">Create your website <ArrowRight className="h-3 w-3" /></Link>
+                      <Link href="/start">Create your website <ArrowRight className="h-3 w-3" /></Link>
                     </Button>
                   ) : (
                     <Button variant="outline" size="sm" className="w-full" disabled data-testid={`plan-${plan.name.toLowerCase()}-cta`}>
@@ -325,7 +325,7 @@ export default async function LandingPage() {
                 </div>
               </div>
               <Link
-                href="/register"
+                href="/start"
                 className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors border border-border rounded-full px-4 py-2"
               >
                 Create your website
@@ -362,7 +362,7 @@ export default async function LandingPage() {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button asChild variant="brand" size="lg">
-              <Link href="/register">Create your website <ArrowRight className="h-4 w-4" /></Link>
+              <Link href="/start">Create your website <ArrowRight className="h-4 w-4" /></Link>
             </Button>
             <a
               href="mailto:hello@site9.in"

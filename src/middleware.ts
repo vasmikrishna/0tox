@@ -109,6 +109,10 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
+    // The landing route resolves a per-tenant homepage override, so it needs the
+    // x-tenant-slug header too — without this, a subdomain's root renders the
+    // default tenant instead of the owner's published site.
+    "/",
     "/client/:path*",
     "/admin/:path*",
     "/employee/:path*",
