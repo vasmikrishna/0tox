@@ -3,15 +3,16 @@
 import { useCallback, useEffect, useState } from "react"
 import {
   CalendarClock, CalendarOff, Plus, Trash2, Check, X, CheckCheck,
-  Clock, RefreshCw, Inbox,
+  Clock, RefreshCw, Inbox, Settings2,
 } from "lucide-react"
+import type { BookingConfig } from "@/lib/booking-config"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import type { Booking, BookingStatus, CalendarBlock } from "@/types"
 
-type Tab = "manage" | "block"
+type Tab = "manage" | "block" | "availability"
 type Counts = { all: number; pending: number; confirmed: number; completed: number; cancelled: number }
 
 const STATUS_META: Record<BookingStatus, { label: string; className: string }> = {
@@ -73,9 +74,22 @@ export default function BookingsPage() {
           <CalendarOff className="h-4 w-4" />
           Block the calendar
         </button>
+        <button
+          data-testid="bookings-tab-availability"
+          onClick={() => setTab("availability")}
+          className={cn(
+            "inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
+            tab === "availability"
+              ? "border-foreground text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Settings2 className="h-4 w-4" />
+          Availability
+        </button>
       </div>
 
-      {tab === "manage" ? <ManageTab /> : <BlockTab />}
+      {tab === "manage" ? <ManageTab /> : tab === "block" ? <BlockTab /> : <AvailabilityTab />}
     </div>
   )
 }
@@ -462,6 +476,171 @@ function BlockTab() {
             ))}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+/* ----------------------------- Availability tab ----------------------------- */
+
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+const SLOT_OPTIONS = [
+  { label: "15 min", value: 15 },
+  { label: "30 min", value: 30 },
+  { label: "45 min", value: 45 },
+  { label: "1 hour", value: 60 },
+  { label: "1.5 hours", value: 90 },
+  { label: "2 hours", value: 120 },
+]
+const BUFFER_OPTIONS = [
+  { label: "None", value: 0 },
+  { label: "5 min", value: 5 },
+  { label: "10 min", value: 10 },
+  { label: "15 min", value: 15 },
+  { label: "30 min", value: 30 },
+]
+
+function AvailabilityTab() {
+  const [config, setConfig] = useState<BookingConfig | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    fetch("/api/admin/booking-config")
+      .then(r => r.json())
+      .then(d => setConfig(d.config))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  function toggleDay(day: number) {
+    if (!config) return
+    const days = config.workingDays.includes(day)
+      ? config.workingDays.filter(d => d !== day)
+      : [...config.workingDays, day].sort()
+    setConfig({ ...config, workingDays: days })
+    setSaved(false)
+  }
+
+  async function save() {
+    if (!config) return
+    setSaving(true)
+    setSaved(false)
+    try {
+      const res = await fetch("/api/admin/booking-config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config),
+      })
+      if (res.ok) setSaved(true)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) return <div className="p-10 text-center text-muted-foreground text-sm">Loading…</div>
+  if (!config) return <div className="p-10 text-center text-muted-foreground text-sm">Could not load config.</div>
+
+  return (
+    <div className="max-w-xl" data-testid="availability-tab">
+      <p className="text-sm text-muted-foreground mb-6">
+        These settings control which days and time slots appear on your public booking page.
+      </p>
+
+      {/* Working days */}
+      <div className="mb-6">
+        <h3 className="text-sm font-medium mb-2">Working days</h3>
+        <div className="flex flex-wrap gap-2">
+          {DAY_LABELS.map((label, i) => (
+            <button
+              key={i}
+              data-testid={`avail-day-${i}`}
+              onClick={() => toggleDay(i)}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
+                config.workingDays.includes(i)
+                  ? "bg-foreground text-background"
+                  : "bg-accent text-muted-foreground",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Working hours */}
+      <div className="mb-6 grid grid-cols-2 gap-4">
+        <label className="block">
+          <span className="text-sm font-medium">Start time</span>
+          <Input
+            type="time"
+            data-testid="avail-start"
+            value={`${String(config.startHour).padStart(2, "0")}:00`}
+            onChange={e => { setConfig({ ...config, startHour: parseInt(e.target.value.split(":")[0]) }); setSaved(false) }}
+          />
+        </label>
+        <label className="block">
+          <span className="text-sm font-medium">End time</span>
+          <Input
+            type="time"
+            data-testid="avail-end"
+            value={`${String(config.endHour).padStart(2, "0")}:00`}
+            onChange={e => { setConfig({ ...config, endHour: parseInt(e.target.value.split(":")[0]) }); setSaved(false) }}
+          />
+        </label>
+      </div>
+
+      {/* Slot duration */}
+      <div className="mb-6">
+        <h3 className="text-sm font-medium mb-2">Appointment duration</h3>
+        <div className="flex flex-wrap gap-2">
+          {SLOT_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              data-testid={`avail-slot-${opt.value}`}
+              onClick={() => { setConfig({ ...config, slotMinutes: opt.value }); setSaved(false) }}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
+                config.slotMinutes === opt.value
+                  ? "bg-foreground text-background"
+                  : "bg-accent text-muted-foreground",
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Buffer */}
+      <div className="mb-6">
+        <h3 className="text-sm font-medium mb-2">Buffer between appointments</h3>
+        <div className="flex flex-wrap gap-2">
+          {BUFFER_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              data-testid={`avail-buffer-${opt.value}`}
+              onClick={() => { setConfig({ ...config, bufferMinutes: opt.value }); setSaved(false) }}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
+                config.bufferMinutes === opt.value
+                  ? "bg-foreground text-background"
+                  : "bg-accent text-muted-foreground",
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Button data-testid="avail-save" disabled={saving} onClick={save}>
+          {saving ? "Saving…" : "Save availability"}
+        </Button>
+        {saved && <span className="text-sm text-green-600">Saved!</span>}
       </div>
     </div>
   )

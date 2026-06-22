@@ -3,17 +3,21 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowRight, ArrowLeft, ExternalLink, PartyPopper } from "lucide-react"
-import { CURATED_TEMPLATES } from "@/lib/curated-templates"
+import {
+  ArrowRight, Send, Wand2, Upload, ImageIcon, MousePointerClick,
+  ExternalLink, Sparkles,
+} from "lucide-react"
 import { buildEditorSrcDoc } from "@/lib/editor-inject"
-import { CategoryPicker } from "@/components/build/category-picker"
-import { TemplateGallery } from "@/components/build/template-gallery"
-import { EditorPanel, type SelectedElement } from "@/components/build/editor-panel"
+import { splitAiHtml } from "@/lib/ai-website-prompt"
 import type { BusinessDetails } from "@/lib/onboarding"
 
-type Step = "details" | "category" | "template" | "generating" | "editor" | "done"
+interface SelectedElement {
+  editKey: string
+  content: string
+  tagName: string
+  s9Type: "text" | "image"
+}
 
 export function Builder({
   initialDetails,
@@ -24,45 +28,30 @@ export function Builder({
   ownerName: string
   host: string
 }) {
-  const [step, setStep] = useState<Step>("details")
-  const [details, setDetails] = useState<BusinessDetails>(initialDetails)
-  const [servicesText, setServicesText] = useState((initialDetails.services ?? []).join("\n"))
-  const [busy, setBusy] = useState(false)
+  const [prompt, setPrompt] = useState("")
+  const [siteHtml, setSiteHtml] = useState("")
+  const [siteCss, setSiteCss] = useState("")
+  const [generating, setGenerating] = useState(false)
+  const [publishing, setPublishing] = useState(false)
+  const [published, setPublished] = useState(false)
   const [error, setError] = useState("")
-
-  const [category, setCategory] = useState("")
-  const [selectedTemplate, setSelectedTemplate] = useState(CURATED_TEMPLATES[0].key)
-  const [editorHtml, setEditorHtml] = useState("")
-  const [editorCss, setEditorCss] = useState("")
-  const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null)
+  const [selectedEl, setSelectedEl] = useState<SelectedElement | null>(null)
 
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const htmlResolveRef = useRef<((html: string) => void) | null>(null)
+  const htmlResolveRef = useRef<((h: string) => void) | null>(null)
+  const promptRef = useRef<HTMLInputElement>(null)
 
-  function set<K extends keyof BusinessDetails>(key: K, value: BusinessDetails[K]) {
-    setDetails((d) => ({ ...d, [key]: value }))
-  }
+  const hasContent = siteHtml.length > 100
+  const hasEditMarkers = siteHtml.includes("data-s9-edit")
 
-  const withServices = (): BusinessDetails => ({
-    ...details,
-    services: servicesText.split("\n").map((s) => s.trim()).filter(Boolean),
-  })
-
-  // -- postMessage listener for iframe editor --------------------------------
-
+  // -- postMessage listener --------------------------------------------------
   const handleMessage = useCallback((e: MessageEvent) => {
     const d = e.data
     if (!d || typeof d.type !== "string" || !d.type.startsWith("s9:")) return
-
     if (d.type === "s9:select") {
-      setSelectedElement({
-        editKey: d.editKey,
-        content: d.content,
-        tagName: d.tagName,
-        s9Type: d.s9Type === "image" ? "image" : "text",
-      })
+      setSelectedEl({ editKey: d.editKey, content: d.content, tagName: d.tagName, s9Type: d.s9Type === "image" ? "image" : "text" })
     } else if (d.type === "s9:deselect") {
-      setSelectedElement(null)
+      setSelectedEl(null)
     } else if (d.type === "s9:html") {
       htmlResolveRef.current?.(d.html)
       htmlResolveRef.current = null
@@ -78,288 +67,319 @@ export function Builder({
     iframeRef.current?.contentWindow?.postMessage(msg, "*")
   }
 
-  function handleEditorUpdate(editKey: string, content: string) {
+  async function getIframeHtml(): Promise<string> {
+    if (!hasEditMarkers || !iframeRef.current?.contentWindow) return siteHtml
+    return new Promise<string>((resolve) => {
+      htmlResolveRef.current = resolve
+      postToIframe({ type: "s9:getHtml" })
+      setTimeout(() => { if (htmlResolveRef.current) { htmlResolveRef.current = null; resolve(siteHtml) } }, 2000)
+    })
+  }
+
+  // -- AI generate / follow-up ------------------------------------------------
+  async function handleGenerate() {
+    const text = prompt.trim()
+    if (!text) return
+    setError("")
+    setGenerating(true)
+    setSelectedEl(null)
+
+    try {
+      const currentHtml = hasContent ? await getIframeHtml() : undefined
+      const res = await fetch("/api/build/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: text, currentHtml }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setError(data.error ?? "Generation failed"); return }
+
+      setSiteHtml(data.html)
+      const split = splitAiHtml(data.html)
+      setSiteCss(split.css)
+      setPrompt("")
+      setPublished(false)
+    } catch {
+      setError("Could not reach AI. Check your connection.")
+    } finally {
+      setGenerating(false)
+      promptRef.current?.focus()
+    }
+  }
+
+  // -- Element editing --------------------------------------------------------
+  function handleElementUpdate(editKey: string, content: string) {
     postToIframe({ type: "s9:update", editKey, content })
   }
 
-  function handleEditorUpdateAttr(editKey: string, attr: string, value: string) {
+  function handleElementAttr(editKey: string, attr: string, value: string) {
     postToIframe({ type: "s9:updateAttr", editKey, attr, value })
   }
 
-  // -- Save business details --------------------------------------------------
-
-  async function saveDetails() {
+  // -- Publish ----------------------------------------------------------------
+  async function handlePublish() {
     setError("")
-    if (!details.name?.trim()) { setError("Business name is required"); return false }
-    setBusy(true)
-    const res = await fetch("/api/build/save", {
+    setPublishing(true)
+
+    const finalHtml = await getIframeHtml()
+    const split = splitAiHtml(finalHtml.includes("<!") ? finalHtml : siteHtml)
+
+    // Save business details first
+    await fetch("/api/build/save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ details: withServices() }),
+      body: JSON.stringify({ details: initialDetails }),
     })
-    setBusy(false)
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}))
-      setError(d.error ?? "Could not save")
-      return false
-    }
-    return true
-  }
-
-  // -- Generate template content with AI --------------------------------------
-
-  async function generateTemplate() {
-    setError("")
-    setStep("generating")
-    try {
-      const res = await fetch("/api/build/generate-template", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          templateKey: selectedTemplate,
-          category,
-          details: withServices(),
-        }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setError(data.error ?? "Could not generate your website")
-        setStep("template")
-        return
-      }
-      setEditorHtml(data.html)
-      setEditorCss(data.css)
-      setSelectedElement(null)
-      setStep("editor")
-    } catch {
-      setError("Could not reach the AI. Check your connection and try again.")
-      setStep("template")
-    }
-  }
-
-  // -- Publish ----------------------------------------------------------------
-
-  async function publish() {
-    setError("")
-    setBusy(true)
-
-    let finalHtml = editorHtml
-    // Ask iframe for the current HTML (captures all visual edits)
-    if (iframeRef.current?.contentWindow) {
-      try {
-        const html = await new Promise<string>((resolve) => {
-          htmlResolveRef.current = resolve
-          postToIframe({ type: "s9:getHtml" })
-          setTimeout(() => {
-            if (htmlResolveRef.current) {
-              htmlResolveRef.current = null
-              resolve(editorHtml)
-            }
-          }, 2000)
-        })
-        finalHtml = html
-      } catch {
-        // fall back to editorHtml
-      }
-    }
 
     const res = await fetch("/api/build/publish", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        mode: "curated",
-        html: finalHtml,
-        css: editorCss,
-        templateKey: selectedTemplate,
-      }),
+      body: JSON.stringify({ mode: "ai", html: finalHtml.includes("<!") ? finalHtml : siteHtml }),
     })
-    setBusy(false)
+    setPublishing(false)
     if (!res.ok) {
       const d = await res.json().catch(() => ({}))
       setError(d.error ?? "Could not publish")
       return
     }
-    setStep("done")
+    setPublished(true)
+    setSiteHtml(split.html)
+    setSiteCss(split.css)
   }
 
+  // -- Build the iframe srcDoc ------------------------------------------------
+  const srcDoc = hasEditMarkers
+    ? buildEditorSrcDoc(
+        siteHtml.includes("<body") ? siteHtml.replace(/[\s\S]*?<body[^>]*>/i, "").replace(/<\/body>[\s\S]*/i, "") : siteHtml,
+        siteCss,
+      )
+    : siteHtml
+
   // -- Render -----------------------------------------------------------------
-
-  const isEditor = step === "editor"
-  const containerClass = isEditor
-    ? "mx-auto max-w-7xl px-4 py-6"
-    : "mx-auto max-w-3xl px-4 py-10"
-
   return (
-    <div className={containerClass}>
-      {!isEditor && (
-        <header className="mb-8 text-center">
-          <p className="text-sm text-muted-foreground">Welcome, {ownerName}</p>
-          <h1 className="text-2xl font-bold tracking-tight">Build your website</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Your site will be live at <span className="font-medium text-foreground">{host}</span>
-          </p>
-        </header>
-      )}
-
-      {error && (
-        <p className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2 text-sm text-destructive" data-testid="build-error">
-          {error}
-        </p>
-      )}
-
-      {/* Step 1: Business details */}
-      {step === "details" && (
-        <section className="space-y-5" data-testid="build-details">
-          <Field label="Business name" required>
-            <Input data-testid="bd-name" value={details.name ?? ""} onChange={(e) => set("name", e.target.value)} placeholder="Sunrise Cafe" />
-          </Field>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Tagline">
-              <Input data-testid="bd-tagline" value={details.tagline ?? ""} onChange={(e) => set("tagline", e.target.value)} placeholder="Freshly brewed, every morning" />
-            </Field>
-            <Field label="Type of business">
-              <Input data-testid="bd-category" value={details.category ?? ""} onChange={(e) => set("category", e.target.value)} placeholder="Cafe, Salon, Studio…" />
-            </Field>
-          </div>
-          <Field label="About your business">
-            <Textarea data-testid="bd-about" rows={3} value={details.about ?? ""} onChange={(e) => set("about", e.target.value)} placeholder="Tell visitors what you do and what makes you special." />
-          </Field>
-          <Field label="Services or offerings" hint="One per line">
-            <Textarea data-testid="bd-services" rows={3} value={servicesText} onChange={(e) => setServicesText(e.target.value)} placeholder={"Espresso & coffee\nFresh pastries\nBreakfast all day"} />
-          </Field>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Address">
-              <Input data-testid="bd-address" value={details.address ?? ""} onChange={(e) => set("address", e.target.value)} placeholder="12 Market St, Bengaluru" />
-            </Field>
-            <Field label="Opening hours">
-              <Input data-testid="bd-hours" value={details.hours ?? ""} onChange={(e) => set("hours", e.target.value)} placeholder="Mon–Sat, 8am–8pm" />
-            </Field>
-            <Field label="Phone">
-              <Input data-testid="bd-phone" value={details.phone ?? ""} onChange={(e) => set("phone", e.target.value)} placeholder="+91 98765 43210" />
-            </Field>
-            <Field label="WhatsApp" hint="For the chat button">
-              <Input data-testid="bd-whatsapp" value={details.whatsapp ?? ""} onChange={(e) => set("whatsapp", e.target.value)} placeholder="+91 98765 43210" />
-            </Field>
-            <Field label="Email">
-              <Input data-testid="bd-email" type="email" value={details.email ?? ""} onChange={(e) => set("email", e.target.value)} placeholder="hello@yourbusiness.com" />
-            </Field>
-          </div>
-          <Button variant="brand" className="w-full" loading={busy} data-testid="build-details-next" onClick={async () => { if (await saveDetails()) setStep("category") }}>
-            Continue <ArrowRight className="h-4 w-4" />
-          </Button>
-        </section>
-      )}
-
-      {/* Step 2: Category selection */}
-      {step === "category" && (
-        <section className="space-y-4">
-          <CategoryPicker onSelect={(cat) => { setCategory(cat); setStep("template") }} />
-          <BackButton onClick={() => setStep("details")} />
-        </section>
-      )}
-
-      {/* Step 3: Template selection */}
-      {step === "template" && (
-        <section className="space-y-5">
-          <TemplateGallery selected={selectedTemplate} onSelect={setSelectedTemplate} />
-          <div className="flex items-center justify-between gap-3">
-            <BackButton onClick={() => setStep("category")} />
-            <Button variant="brand" data-testid="build-generate" onClick={generateTemplate}>
-              Generate my website <ArrowRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </section>
-      )}
-
-      {/* Step 4: Generating (transient) */}
-      {step === "generating" && (
-        <section className="space-y-4 text-center" data-testid="build-generating">
-          <div className="rounded-xl border border-border bg-card p-10">
-            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
-            <p className="text-sm font-medium">Generating your website…</p>
-            <p className="mt-1 text-xs text-muted-foreground">Filling in your content. This usually takes 10–20 seconds.</p>
-          </div>
-        </section>
-      )}
-
-      {/* Step 5: Visual editor */}
-      {step === "editor" && (
-        <section data-testid="build-editor">
-          <div className="mb-4 flex items-center justify-between">
-            <BackButton onClick={() => setStep("template")} />
-            <h2 className="text-lg font-semibold">Edit your website</h2>
-            <Button variant="brand" loading={busy} data-testid="publish-curated" onClick={publish}>
-              Publish <ArrowRight className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="flex flex-col gap-4 lg:flex-row">
-            <div className="flex-1 overflow-hidden rounded-xl border border-border">
-              <iframe
-                ref={iframeRef}
-                title="Website editor"
-                data-testid="editor-preview"
-                srcDoc={buildEditorSrcDoc(editorHtml, editorCss)}
-                className="h-[600px] w-full bg-white"
-                sandbox="allow-scripts"
-              />
-            </div>
-            <div className="w-full shrink-0 rounded-xl border border-border bg-card lg:w-80">
-              <EditorPanel
-                selected={selectedElement}
-                onUpdate={handleEditorUpdate}
-                onUpdateAttr={handleEditorUpdateAttr}
-                businessName={details.name ?? ""}
-              />
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Step 6: Done */}
-      {step === "done" && (
-        <section className="space-y-6 text-center" data-testid="build-done">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand/10">
-            <PartyPopper className="h-7 w-7 text-brand" />
-          </div>
+    <div className="flex h-screen flex-col bg-background">
+      {/* Top bar */}
+      <header className="flex items-center justify-between border-b border-border px-4 py-2.5 shrink-0">
+        <div className="flex items-center gap-3">
+          <Sparkles className="h-5 w-5 text-brand" />
           <div>
-            <h2 className="text-xl font-bold">Your website is live!</h2>
-            <p className="mt-1 text-sm text-muted-foreground">It&apos;s published and your portal is now unlocked.</p>
+            <p className="text-sm font-semibold">Site9 Builder</p>
+            <p className="text-xs text-muted-foreground">{ownerName} · {host}</p>
           </div>
-          <a
-            href={`https://${host}`}
-            target="_blank"
-            rel="noopener"
-            data-testid="done-view-site"
-            className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-sm font-medium hover:bg-accent"
+        </div>
+        <div className="flex items-center gap-2">
+          {published && (
+            <a href={`https://${host}`} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 text-xs text-brand hover:underline">
+              <ExternalLink className="h-3 w-3" /> View live site
+            </a>
+          )}
+          <Button
+            size="sm"
+            variant="brand"
+            disabled={!hasContent || publishing}
+            onClick={handlePublish}
+            data-testid="builder-publish"
           >
-            View my site at {host} <ExternalLink className="h-4 w-4" />
-          </a>
-          <Button asChild variant="brand" className="w-full" data-testid="done-dashboard">
-            <a href="/client/dashboard">Go to my dashboard <ArrowRight className="h-4 w-4" /></a>
+            {publishing ? "Publishing…" : published ? "Published ✓" : "Publish"} <ArrowRight className="h-3.5 w-3.5" />
           </Button>
-        </section>
+        </div>
+      </header>
+
+      {/* Main area */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Preview */}
+        <div className="flex-1 flex flex-col">
+          {!hasContent && !generating ? (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="text-center max-w-lg">
+                <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand/10">
+                  <Wand2 className="h-8 w-8 text-brand" />
+                </div>
+                <h1 className="text-2xl font-bold tracking-tight">What do you want to build?</h1>
+                <p className="mt-2 text-muted-foreground">
+                  Describe your website and AI will create it instantly. You can refine it with follow-up prompts.
+                </p>
+                <div className="mt-6 space-y-2 text-left">
+                  {[
+                    `A modern website for ${initialDetails.name || "my business"} — a ${initialDetails.category || "local business"} with services, about section, and contact info`,
+                    "A photography portfolio with a dark theme, full-width gallery, and contact form",
+                    "A restaurant landing page with menu highlights, opening hours, and reservation CTA",
+                  ].map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      onClick={() => { setPrompt(suggestion); promptRef.current?.focus() }}
+                      className="w-full rounded-lg border border-border bg-card px-4 py-3 text-left text-sm text-muted-foreground hover:border-brand/50 hover:text-foreground transition-colors"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : generating ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
+                <p className="text-sm font-medium">{hasContent ? "Updating your website…" : "Creating your website…"}</p>
+                <p className="mt-1 text-xs text-muted-foreground">This usually takes 10–30 seconds</p>
+              </div>
+            </div>
+          ) : (
+            <iframe
+              ref={iframeRef}
+              title="Website preview"
+              data-testid="builder-preview"
+              srcDoc={srcDoc}
+              className="flex-1 w-full bg-white"
+              sandbox={hasEditMarkers ? "allow-scripts" : ""}
+            />
+          )}
+        </div>
+
+        {/* Right panel — only when there's content */}
+        {hasContent && !generating && (
+          <div className="hidden lg:flex w-80 shrink-0 flex-col border-l border-border bg-card">
+            {selectedEl ? (
+              <ElementEditor
+                key={selectedEl.editKey}
+                selected={selectedEl}
+                onUpdate={handleElementUpdate}
+                onUpdateAttr={handleElementAttr}
+                businessName={initialDetails.name ?? ""}
+              />
+            ) : (
+              <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center text-muted-foreground">
+                <MousePointerClick className="h-8 w-8" />
+                <p className="text-sm">Click any element to edit it</p>
+                <p className="text-xs">Or type a follow-up prompt below</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Bottom prompt bar */}
+      <div className="shrink-0 border-t border-border bg-background px-4 py-3">
+        {error && (
+          <p className="mb-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-1.5 text-xs text-destructive">{error}</p>
+        )}
+        <form
+          onSubmit={(e) => { e.preventDefault(); handleGenerate() }}
+          className="mx-auto flex max-w-3xl items-center gap-2"
+        >
+          <Input
+            ref={promptRef}
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder={hasContent ? "Describe changes… e.g. 'make the hero darker' or 'add a testimonials section'" : "Describe your website… e.g. 'A modern cafe website with menu and contact'"}
+            disabled={generating}
+            className="flex-1"
+            data-testid="builder-prompt"
+          />
+          <Button type="submit" disabled={generating || !prompt.trim()} data-testid="builder-send">
+            <Send className="h-4 w-4" />
+          </Button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Element editor panel (inline, not a separate file)
+// ---------------------------------------------------------------------------
+
+function ElementEditor({
+  selected,
+  onUpdate,
+  onUpdateAttr,
+  businessName,
+}: {
+  selected: SelectedElement
+  onUpdate: (key: string, content: string) => void
+  onUpdateAttr: (key: string, attr: string, val: string) => void
+  businessName: string
+}) {
+  const [editValue, setEditValue] = useState(selected.content)
+  const [imageUrl, setImageUrl] = useState(selected.s9Type === "image" ? selected.content : "")
+  const [aiInstruction, setAiInstruction] = useState("")
+  const [aiLoading, setAiLoading] = useState(false)
+  const [uploadLoading, setUploadLoading] = useState(false)
+  const [err, setErr] = useState("")
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  async function aiRewrite() {
+    if (!aiInstruction.trim()) return
+    setErr(""); setAiLoading(true)
+    try {
+      const res = await fetch("/api/build/edit-element", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentContent: editValue, instruction: aiInstruction, businessName }),
+      })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok) { setErr(d.error ?? "Failed"); return }
+      setEditValue(d.content); onUpdate(selected.editKey, d.content); setAiInstruction("")
+    } catch { setErr("AI unreachable.") }
+    finally { setAiLoading(false) }
+  }
+
+  async function uploadImage(file: File) {
+    setErr(""); setUploadLoading(true)
+    try {
+      const fd = new FormData(); fd.append("file", file)
+      const res = await fetch("/api/build/upload", { method: "POST", body: fd })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok) { setErr(d.error ?? "Upload failed"); return }
+      setImageUrl(d.url); onUpdateAttr(selected.editKey, "src", d.url)
+    } catch { setErr("Upload failed.") }
+    finally { setUploadLoading(false) }
+  }
+
+  const zoneName = selected.editKey.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+
+  return (
+    <div className="flex flex-col gap-4 overflow-y-auto p-4">
+      <div>
+        <p className="text-xs font-medium text-muted-foreground">Editing</p>
+        <p className="font-semibold text-sm">{zoneName}</p>
+      </div>
+      {err && <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">{err}</p>}
+
+      {selected.s9Type === "text" && (
+        <>
+          <Textarea rows={4} value={editValue} onChange={(e) => setEditValue(e.target.value)} className="text-sm" />
+          <Button size="sm" variant="brand" onClick={() => onUpdate(selected.editKey, editValue)}>Update</Button>
+          <div className="border-t border-border pt-3">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">AI Rewrite</p>
+            <Input placeholder="e.g. Make it shorter…" value={aiInstruction} onChange={(e) => setAiInstruction(e.target.value)} onKeyDown={(e) => e.key === "Enter" && aiRewrite()} />
+            <Button size="sm" variant="outline" className="mt-2 w-full" loading={aiLoading} disabled={!aiInstruction.trim()} onClick={aiRewrite}>
+              <Wand2 className="h-3.5 w-3.5" /> Rewrite with AI
+            </Button>
+          </div>
+        </>
+      )}
+
+      {selected.s9Type === "image" && (
+        <>
+          <div className="overflow-hidden rounded-lg border border-border">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imageUrl || selected.content} alt="Current" className="aspect-video w-full object-cover" />
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f) }} />
+          <Button size="sm" variant="brand" loading={uploadLoading} onClick={() => fileRef.current?.click()}>
+            <Upload className="h-3.5 w-3.5" /> Upload image
+          </Button>
+          <div className="border-t border-border pt-3">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">Or paste an image URL</p>
+            <div className="flex gap-2">
+              <Input placeholder="https://..." value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} />
+              <Button size="sm" variant="outline" onClick={() => { if (imageUrl.trim()) onUpdateAttr(selected.editKey, "src", imageUrl.trim()) }}>
+                <ImageIcon className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        </>
       )}
     </div>
-  )
-}
-
-function Field({ label, hint, required, children }: { label: string; hint?: string; required?: boolean; children: React.ReactNode }) {
-  return (
-    <div className="space-y-2">
-      <Label>
-        {label}
-        {required && <span className="text-destructive"> *</span>}
-        {hint && <span className="ml-2 text-xs font-normal text-muted-foreground">{hint}</span>}
-      </Label>
-      {children}
-    </div>
-  )
-}
-
-function BackButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground" data-testid="build-back">
-      <ArrowLeft className="h-3.5 w-3.5" /> Back
-    </button>
   )
 }

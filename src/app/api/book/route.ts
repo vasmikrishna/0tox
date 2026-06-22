@@ -1,20 +1,22 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentTenant } from "@/lib/tenant"
+import { getBookingConfig } from "@/lib/booking-config"
 
 const supabaseConfigured = () =>
   process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http") &&
   !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// GET — public: upcoming blocked ranges + booked slots, so the form can warn
-// the customer before they submit (server still enforces on POST).
+// GET — public: booking config + upcoming blocked ranges.
 export async function GET() {
+  const tenant = await getCurrentTenant().catch(() => null)
+  const config = getBookingConfig(tenant?.settings)
+
   if (!supabaseConfigured()) {
-    return NextResponse.json({ blocks: [], busy: [] })
+    return NextResponse.json({ config, blocks: [] })
   }
 
   const supabase = createClient()
-  const tenant = await getCurrentTenant().catch(() => null)
   const nowIso = new Date().toISOString()
 
   const blocksQ = supabase
@@ -24,17 +26,9 @@ export async function GET() {
     .order("starts_at", { ascending: true })
   if (tenant?.id) blocksQ.eq("tenant_id", tenant.id)
 
-  const busyQ = supabase
-    .from("bookings")
-    .select("starts_at, ends_at")
-    .gte("ends_at", nowIso)
-    .in("status", ["pending", "confirmed"])
-    .order("starts_at", { ascending: true })
-  if (tenant?.id) busyQ.eq("tenant_id", tenant.id)
+  const { data: blocks } = await blocksQ
 
-  const [{ data: blocks }, { data: busy }] = await Promise.all([blocksQ, busyQ])
-
-  return NextResponse.json({ blocks: blocks ?? [], busy: busy ?? [] })
+  return NextResponse.json({ config, blocks: blocks ?? [] })
 }
 
 // POST — public: a customer requests an appointment. Rejected (409) if the
