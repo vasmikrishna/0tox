@@ -1,11 +1,34 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { jwtVerify } from "jose"
+import { createClient } from "@supabase/supabase-js"
 import { FEATURES } from "@/lib/features"
 
 const SECRET = new TextEncoder().encode(
   process.env.SESSION_SECRET ?? "fallback-dev-secret-change-in-production"
 )
 const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN ?? "0tox.com"
+
+const tenantCache = new Map<string, { id: string; ts: number }>()
+const CACHE_TTL = 60_000
+
+async function getTenantIdForSlug(slug: string): Promise<string | null> {
+  const cached = tenantCache.get(slug)
+  if (cached && Date.now() - cached.ts < CACHE_TTL) return cached.id
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!url || !key) return null
+
+  try {
+    const sb = createClient(url, key)
+    const { data } = await sb.from("tenants").select("id").eq("slug", slug).eq("status", "active").maybeSingle()
+    if (data?.id) {
+      tenantCache.set(slug, { id: data.id, ts: Date.now() })
+      return data.id
+    }
+  } catch { /* ignore */ }
+  return null
+}
 
 async function getSessionFromRequest(req: NextRequest) {
   try {
@@ -86,6 +109,16 @@ export async function middleware(req: NextRequest) {
     path.startsWith("/client") ||
     path.startsWith("/admin") ||
     path.startsWith("/employee")
+
+  // Tenant isolation: if the session belongs to a different tenant than the
+  // current subdomain, treat as unauthenticated on protected routes.
+  // The platform super-admin (id === "admin") is exempt — they can access any tenant.
+  if (session && isProtected && session.tenant_id && session.id !== "admin") {
+    const currentTenantId = await getTenantIdForSlug(tenantSlug)
+    if (currentTenantId && session.tenant_id !== currentTenantId) {
+      return NextResponse.redirect(new URL("/login", req.url))
+    }
+  }
 
   if (!session && isProtected) {
     return NextResponse.redirect(new URL("/login", req.url))
