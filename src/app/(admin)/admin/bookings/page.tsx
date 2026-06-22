@@ -224,10 +224,31 @@ function ManageTab() {
   )
 }
 
+const TIME_SLOTS: string[] = []
+for (let h = 0; h < 24; h++) {
+  for (const m of [0, 30]) {
+    const hh = String(h).padStart(2, "0")
+    const mm = String(m).padStart(2, "0")
+    TIME_SLOTS.push(`${hh}:${mm}`)
+  }
+}
+
+function fmtTime(t: string) {
+  const [h, m] = t.split(":").map(Number)
+  const ampm = h >= 12 ? "PM" : "AM"
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h
+  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`
+}
+
+function todayStr() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
+
 function NewBookingForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: () => void }) {
   const [form, setForm] = useState({
     customer_name: "", customer_email: "", customer_phone: "",
-    service: "", starts_at: "", ends_at: "", notes: "",
+    service: "", startDate: todayStr(), startTime: "09:00", endDate: todayStr(), endTime: "10:00", notes: "",
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -237,13 +258,27 @@ function NewBookingForm({ onCreated, onCancel }: { onCreated: () => void; onCanc
   }
 
   async function submit() {
+    if (!form.startDate || !form.startTime || !form.endDate || !form.endTime) {
+      setError("Start and end date/time are required")
+      return
+    }
     setSaving(true)
     setError(null)
     try {
+      const starts_at = `${form.startDate}T${form.startTime}:00`
+      const ends_at = `${form.endDate}T${form.endTime}:00`
       const res = await fetch("/api/admin/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          customer_name: form.customer_name,
+          customer_email: form.customer_email,
+          customer_phone: form.customer_phone,
+          service: form.service,
+          starts_at,
+          ends_at,
+          notes: form.notes,
+        }),
       })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
@@ -263,14 +298,29 @@ function NewBookingForm({ onCreated, onCancel }: { onCreated: () => void; onCanc
         <Input placeholder="Service (optional)" data-testid="booking-field-service" value={form.service} onChange={e => set("service", e.target.value)} />
         <Input type="email" placeholder="Email (optional)" data-testid="booking-field-email" value={form.customer_email} onChange={e => set("customer_email", e.target.value)} />
         <Input placeholder="Phone (optional)" data-testid="booking-field-phone" value={form.customer_phone} onChange={e => set("customer_phone", e.target.value)} />
-        <label className="text-sm">
-          <span className="text-muted-foreground text-xs">Starts</span>
-          <Input type="datetime-local" data-testid="booking-field-starts" value={form.starts_at} onChange={e => set("starts_at", e.target.value)} />
-        </label>
-        <label className="text-sm">
-          <span className="text-muted-foreground text-xs">Ends</span>
-          <Input type="datetime-local" data-testid="booking-field-ends" value={form.ends_at} onChange={e => set("ends_at", e.target.value)} />
-        </label>
+
+        <div className="space-y-1">
+          <span className="text-muted-foreground text-xs">Start date</span>
+          <Input type="date" data-testid="booking-field-start-date" value={form.startDate} onChange={e => { set("startDate", e.target.value); if (!form.endDate || e.target.value > form.endDate) set("endDate", e.target.value) }} />
+        </div>
+        <div className="space-y-1">
+          <span className="text-muted-foreground text-xs">Start time</span>
+          <select data-testid="booking-field-start-time" value={form.startTime} onChange={e => set("startTime", e.target.value)}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            {TIME_SLOTS.map(t => <option key={t} value={t}>{fmtTime(t)}</option>)}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <span className="text-muted-foreground text-xs">End date</span>
+          <Input type="date" data-testid="booking-field-end-date" value={form.endDate} min={form.startDate} onChange={e => set("endDate", e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <span className="text-muted-foreground text-xs">End time</span>
+          <select data-testid="booking-field-end-time" value={form.endTime} onChange={e => set("endTime", e.target.value)}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            {TIME_SLOTS.map(t => <option key={t} value={t}>{fmtTime(t)}</option>)}
+          </select>
+        </div>
       </div>
       <Textarea className="mt-3" placeholder="Notes (optional)" data-testid="booking-field-notes" value={form.notes} onChange={e => set("notes", e.target.value)} />
       {error && <p className="text-sm text-red-500 mt-2" data-testid="booking-form-error">{error}</p>}
@@ -289,7 +339,7 @@ function NewBookingForm({ onCreated, onCancel }: { onCreated: () => void; onCanc
 function BlockTab() {
   const [blocks, setBlocks] = useState<CalendarBlock[]>([])
   const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState({ title: "", starts_at: "", ends_at: "", all_day: false })
+  const [form, setForm] = useState({ title: "", startDate: todayStr(), startTime: "09:00", endDate: todayStr(), endTime: "17:00", all_day: false })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -307,20 +357,23 @@ function BlockTab() {
   useEffect(() => { load() }, [load])
 
   async function submit() {
+    if (!form.startDate || !form.endDate) { setError("Dates are required"); return }
     setSaving(true)
     setError(null)
     try {
+      const starts_at = form.all_day ? form.startDate : `${form.startDate}T${form.startTime}:00`
+      const ends_at = form.all_day ? form.endDate : `${form.endDate}T${form.endTime}:00`
       const res = await fetch("/api/admin/calendar-blocks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ title: form.title, starts_at, ends_at, all_day: form.all_day }),
       })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
         setError(d.error ?? "Failed to block time")
         return
       }
-      setForm({ title: "", starts_at: "", ends_at: "", all_day: false })
+      setForm({ title: "", startDate: todayStr(), startTime: "09:00", endDate: todayStr(), endTime: "17:00", all_day: false })
       load()
     } finally {
       setSaving(false)
@@ -342,14 +395,32 @@ function BlockTab() {
         </p>
         <div className="space-y-3">
           <Input placeholder="Reason (e.g. Public holiday)" data-testid="block-field-title" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
-          <label className="block text-sm">
+          <div className="space-y-1">
             <span className="text-muted-foreground text-xs">From</span>
-            <Input type={form.all_day ? "date" : "datetime-local"} data-testid="block-field-starts" value={form.starts_at} onChange={e => setForm(f => ({ ...f, starts_at: e.target.value }))} />
-          </label>
-          <label className="block text-sm">
+            <Input type="date" data-testid="block-field-start-date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value, endDate: e.target.value > f.endDate ? e.target.value : f.endDate }))} />
+          </div>
+          {!form.all_day && (
+            <div className="space-y-1">
+              <span className="text-muted-foreground text-xs">Start time</span>
+              <select data-testid="block-field-start-time" value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                {TIME_SLOTS.map(t => <option key={t} value={t}>{fmtTime(t)}</option>)}
+              </select>
+            </div>
+          )}
+          <div className="space-y-1">
             <span className="text-muted-foreground text-xs">To</span>
-            <Input type={form.all_day ? "date" : "datetime-local"} data-testid="block-field-ends" value={form.ends_at} onChange={e => setForm(f => ({ ...f, ends_at: e.target.value }))} />
-          </label>
+            <Input type="date" data-testid="block-field-end-date" value={form.endDate} min={form.startDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} />
+          </div>
+          {!form.all_day && (
+            <div className="space-y-1">
+              <span className="text-muted-foreground text-xs">End time</span>
+              <select data-testid="block-field-end-time" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                {TIME_SLOTS.map(t => <option key={t} value={t}>{fmtTime(t)}</option>)}
+              </select>
+            </div>
+          )}
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" data-testid="block-field-allday" checked={form.all_day} onChange={e => setForm(f => ({ ...f, all_day: e.target.checked }))} />
             All day

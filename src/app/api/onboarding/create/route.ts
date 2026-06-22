@@ -63,13 +63,15 @@ export async function POST(req: Request) {
     )
   }
 
-  // Create the owner user, scoped to the new tenant.
+  // Create the owner user, scoped to the new tenant. The person who claims a
+  // subdomain owns that tenant, so they get the "admin" role (full portal),
+  // not "client". (Platform super-admin is separate — see auth/login.)
   try {
     const bcrypt = await import("bcryptjs")
     const password_hash = await bcrypt.hash(password, 12)
     const { data: user, error: uErr } = await (supabase as any)
       .from("users")
-      .insert({ name, email, password_hash, role: "client", tenant_id: tenant.id, status: "active" })
+      .insert({ name, email, password_hash, role: "admin", tenant_id: tenant.id, status: "active" })
       .select("id, email, name, role, tenant_id")
       .single()
 
@@ -79,7 +81,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Could not create your account" }, { status: 500 })
     }
 
-    await createSession({ id: user.id, email: user.email, name: user.name, role: "client", tenant_id: tenant.id })
+    await createSession({ id: user.id, email: user.email, name: user.name, role: "admin", tenant_id: tenant.id })
     return NextResponse.json({ ok: true, slug, tenantId: tenant.id })
   } catch {
     await (supabase as any).from("tenants").delete().eq("id", tenant.id)

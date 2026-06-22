@@ -32,7 +32,7 @@ export async function GET(req: Request) {
     .select("*")
     .order("starts_at", { ascending: false })
   if (tenant?.id) query = query.eq("tenant_id", tenant.id)
-  if (status && STATUSES.includes(status as BookingStatus)) query = query.eq("status", status as BookingStatus)
+  if (status && (STATUSES as string[]).includes(status)) query = query.eq("status", status as BookingStatus)
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

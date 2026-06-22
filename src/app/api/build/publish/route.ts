@@ -3,15 +3,17 @@ import { createClient } from "@/lib/supabase/server"
 import { getOwnerContext } from "@/lib/build-owner"
 import { renderBusinessTemplate, getBusinessTemplate } from "@/lib/business-templates"
 import { splitAiHtml } from "@/lib/ai-website-prompt"
+import { stripEditorMarkers } from "@/lib/curated-templates"
 import { subdomainHost, type BusinessDetails } from "@/lib/onboarding"
 
 /**
  * POST /api/build/publish
  * Turns the owner's choice into a published homepage and unlocks their portal.
  *
- * Body: { mode: "template" | "ai", templateKey?, html? }
- *  - template: render the chosen design from saved business details
- *  - ai:       split the pasted AI document into html + css
+ * Body: { mode: "template" | "ai" | "curated", templateKey?, html?, css? }
+ *  - template: render the chosen design from saved business details (legacy)
+ *  - ai:       split the pasted/generated AI document into html + css (legacy)
+ *  - curated:  publish the visually-edited curated template (new flow)
  *
  * Writes the tenant's single homepage custom_pages row (creating or updating
  * it) and flips tenants.onboarding_complete = true.
@@ -21,16 +23,24 @@ export async function POST(req: Request) {
   if (!owner) return NextResponse.json({ error: "Not signed in" }, { status: 401 })
 
   const body = await req.json().catch(() => ({}))
-  const mode = body.mode === "ai" ? "ai" : "template"
+  const mode = body.mode === "curated" ? "curated" : body.mode === "ai" ? "ai" : "template"
 
-  const business = ((owner.tenant.settings as any)?.business ?? { name: owner.tenant.name }) as BusinessDetails
+  const business = ((owner.tenant.settings as Record<string, unknown>)?.business ?? { name: owner.tenant.name }) as BusinessDetails
   if (!business.name) return NextResponse.json({ error: "Add your business details first" }, { status: 400 })
 
   let html = ""
   let css = ""
   let template = "blank"
 
-  if (mode === "template") {
+  if (mode === "curated") {
+    const raw = String(body.html ?? "")
+    if (raw.trim().length < 40) {
+      return NextResponse.json({ error: "No content to publish" }, { status: 400 })
+    }
+    html = stripEditorMarkers(raw)
+    css = String(body.css ?? "")
+    template = String(body.templateKey ?? "curated")
+  } else if (mode === "template") {
     const key = String(body.templateKey ?? "")
     const tpl = getBusinessTemplate(key)
     const rendered = renderBusinessTemplate(tpl.key, business)
@@ -52,6 +62,7 @@ export async function POST(req: Request) {
   const supabase = createClient()
 
   // Find this tenant's existing homepage row (one homepage per tenant).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- hand-written DB types
   const { data: existing } = await (supabase as any)
     .from("custom_pages")
     .select("id")
@@ -71,7 +82,9 @@ export async function POST(req: Request) {
   }
 
   const write = existing?.id
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- hand-written DB types
     ? await (supabase as any).from("custom_pages").update(row).eq("id", existing.id)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     : await (supabase as any).from("custom_pages").insert(row)
 
   if (write.error) {
@@ -79,6 +92,7 @@ export async function POST(req: Request) {
   }
 
   // Unlock the portal.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: tErr } = await (supabase as any)
     .from("tenants")
     .update({ onboarding_complete: true })

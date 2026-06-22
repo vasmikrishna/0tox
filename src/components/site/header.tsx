@@ -21,8 +21,12 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="text-xl font-bold tracking-tight text-white hover:opacity-90">
-            {siteName}
+          <Link href="/" className="flex items-center gap-2.5 hover:opacity-90" data-testid="site-logo">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-mark.svg" alt="" aria-hidden="true" className="h-9 w-auto" />
+            <span className="text-xl font-bold tracking-tight text-white">
+              {siteName === "Site9" ? <>Site<span className="text-[#5C93FF]">9</span></> : siteName}
+            </span>
           </Link>
 
           {/* Desktop nav */}
