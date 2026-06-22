@@ -70,6 +70,9 @@ export async function middleware(req: NextRequest) {
   if (!FEATURES.pageBuilder && (path.startsWith("/admin/pages") || path.startsWith("/p/"))) {
     return NextResponse.redirect(new URL(path.startsWith("/admin") ? "/admin/dashboard" : "/", req.url))
   }
+  if (!FEATURES.bookings && (path.startsWith("/admin/bookings") || path.startsWith("/book"))) {
+    return NextResponse.redirect(new URL(path.startsWith("/admin") ? "/admin/dashboard" : "/", req.url))
+  }
 
   // Superadmin: only the platform admin email can access
   if (path.startsWith("/superadmin")) {

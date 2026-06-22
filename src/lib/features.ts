@@ -14,6 +14,8 @@ export const FEATURES = {
   ecommerce: false,
   /** Custom HTML page builder (/admin/pages, /p/[slug], homepage override). */
   pageBuilder: true,
+  /** Appointment bookings + calendar blocking (/admin/bookings). */
+  bookings: true,
 } as const
 
 export type FeatureKey = keyof typeof FEATURES

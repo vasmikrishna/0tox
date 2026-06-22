@@ -326,3 +326,30 @@ export interface CustomPage {
   created_at: string
   updated_at?: string
 }
+
+export type BookingStatus = "pending" | "confirmed" | "completed" | "cancelled"
+
+export interface Booking {
+  id: string
+  tenant_id?: string | null
+  customer_name: string
+  customer_email?: string | null
+  customer_phone?: string | null
+  service?: string | null
+  starts_at: string
+  ends_at: string
+  status: BookingStatus
+  notes?: string | null
+  created_at: string
+  updated_at?: string
+}
+
+export interface CalendarBlock {
+  id: string
+  tenant_id?: string | null
+  title: string
+  starts_at: string
+  ends_at: string
+  all_day: boolean
+  created_at: string
+}

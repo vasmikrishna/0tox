@@ -1,4 +1,4 @@
-import type { DeliverableFile, IntakeQuestion, IntakeResponse, Payment, PortfolioItem, Project, Service, Stage, StageTemplate, User, Product, Order, OrderItem, CustomPage } from "@/types"
+import type { DeliverableFile, IntakeQuestion, IntakeResponse, Payment, PortfolioItem, Project, Service, Stage, StageTemplate, User, Product, Order, OrderItem, CustomPage, Booking, CalendarBlock } from "@/types"
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -28,6 +28,8 @@ export type Database = {
       orders: Table<Order & BaseRow>
       order_items: Table<OrderItem & BaseRow>
       custom_pages: Table<CustomPage & BaseRow>
+      bookings: Table<Booking & BaseRow>
+      calendar_blocks: Table<CalendarBlock & BaseRow>
     }
     Views: Record<string, never>
     Functions: {
