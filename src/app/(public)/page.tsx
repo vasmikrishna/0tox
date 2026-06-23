@@ -400,7 +400,8 @@ export default async function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-border py-10">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <span className="text-lg font-bold">Site9</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/site9-logo.png" alt="Site9 — One Website for Every Business" className="h-9 w-auto" />
           <p className="text-sm text-muted-foreground">One Website for Every Business.</p>
           <div className="flex items-center gap-4">
             <a
