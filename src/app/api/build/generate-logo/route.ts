@@ -6,6 +6,9 @@ import { uploadBufferToR2 } from "@/lib/r2"
 export const runtime = "nodejs"
 export const maxDuration = 120
 
+// Gemini model for logo SVG generation. Override via env if it gets deprecated.
+const LOGO_MODEL = process.env.GEMINI_LOGO_MODEL ?? "gemini-2.5-flash"
+
 const SYSTEM = `You are an expert logo designer. Create a clean, professional SVG logo.
 
 OUTPUT RULES (strict):
@@ -39,7 +42,7 @@ Make it modern, clean, and professional.`
 
     const ai = new GoogleGenAI({ apiKey: geminiKey })
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-lite",
+      model: LOGO_MODEL,
       contents: userMessage,
       config: { systemInstruction: SYSTEM, maxOutputTokens: 8192, temperature: 0.7 },
     })
