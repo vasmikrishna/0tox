@@ -469,8 +469,8 @@ export function OnboardingWizard({ initialDetails, onComplete }: OnboardingWizar
 
               {/* Preview dialog */}
               <Dialog open={!!previewSite} onOpenChange={(open) => !open && setPreviewSite(null)}>
-                <DialogContent className="max-w-4xl h-[80vh] p-0 gap-0 overflow-hidden">
-                  <DialogTitle className="px-4 py-3 border-b text-sm font-semibold">
+                <DialogContent className="max-w-4xl h-[80vh] p-0 gap-0 overflow-hidden flex flex-col">
+                  <DialogTitle className="shrink-0 px-4 py-3 border-b text-sm font-semibold">
                     {previewSite?.name}
                   </DialogTitle>
                   {previewSite && (
@@ -478,7 +478,7 @@ export function OnboardingWizard({ initialDetails, onComplete }: OnboardingWizar
                       title="Reference site preview"
                       srcDoc={previewSite.html.startsWith("<!") ? previewSite.html : `<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font-family:system-ui,sans-serif;}${previewSite.css}</style></head><body>${previewSite.html}</body></html>`}
                       sandbox=""
-                      className="w-full flex-1 bg-white"
+                      className="w-full flex-1 min-h-0 bg-white"
                       data-testid="wizard-ref-preview"
                     />
                   )}
