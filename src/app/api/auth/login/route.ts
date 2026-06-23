@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     const slug = await getTenantSlug()
     const tenant = await getTenantBySlug(slug)
     await createSession({ id: "admin", email, name: "Admin", role: "admin", tenant_id: tenant?.id ?? "" })
-    return NextResponse.json({ role: "admin" })
+    return NextResponse.json({ role: "admin", superadmin: true })
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -54,5 +54,5 @@ export async function POST(req: Request) {
   }
 
   await createSession({ id: user.id, email: user.email, name: user.name, role: user.role, tenant_id: user.tenant_id })
-  return NextResponse.json({ role: user.role })
+  return NextResponse.json({ role: user.role, onboarding_complete: tenant.onboarding_complete ?? false })
 }

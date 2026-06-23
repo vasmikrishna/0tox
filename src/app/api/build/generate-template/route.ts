@@ -84,44 +84,51 @@ RULES:
 - Service cards must use <h3> for the name and <p> for the description.
 - Return ONLY valid JSON. No markdown fences, no explanation.`
 
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: { maxOutputTokens: 4096, temperature: 0.7 },
-    })
-
-    const raw = (response.text ?? "").trim()
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/\s*```$/i, "")
-      .trim()
-
-    let filled: Record<string, string>
+  const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+  for (let mi = 0; mi < models.length; mi++) {
     try {
-      filled = JSON.parse(raw)
-    } catch {
-      return NextResponse.json({ error: "AI returned invalid content. Please try again." }, { status: 502 })
-    }
+      const response = await ai.models.generateContent({
+        model: models[mi],
+        contents: prompt,
+        config: { maxOutputTokens: 4096, temperature: 0.7 },
+      })
 
-    let finalHtml = templateHtml
-    for (const [key, value] of Object.entries(filled)) {
-      if (typeof value !== "string") continue
-      const isImage = templateHtml.includes(`data-s9-edit="${key}" data-s9-type="image"`)
-      if (isImage) {
-        finalHtml = finalHtml.replace(
-          new RegExp(`(data-s9-edit="${key}"[^>]*src=")[^"]*(")`),
-          `$1${value}$2`,
-        )
-      } else {
-        finalHtml = finalHtml.replace(
-          new RegExp(`(data-s9-edit="${key}"[^>]*>)[\\s\\S]*?(<\\/)`),
-          `$1${value}$2`,
-        )
+      const raw = (response.text ?? "").trim()
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim()
+
+      let filled: Record<string, string>
+      try {
+        filled = JSON.parse(raw)
+      } catch {
+        return NextResponse.json({ error: "AI returned invalid content. Please try again." }, { status: 502 })
       }
-    }
 
-    return NextResponse.json({ html: finalHtml, css })
-  } catch {
-    return NextResponse.json({ error: "Could not generate content. Please try again." }, { status: 502 })
+      let finalHtml = templateHtml
+      for (const [key, value] of Object.entries(filled)) {
+        if (typeof value !== "string") continue
+        const isImage = templateHtml.includes(`data-s9-edit="${key}" data-s9-type="image"`)
+        if (isImage) {
+          finalHtml = finalHtml.replace(
+            new RegExp(`(data-s9-edit="${key}"[^>]*src=")[^"]*(")`),
+            `$1${value}$2`,
+          )
+        } else {
+          finalHtml = finalHtml.replace(
+            new RegExp(`(data-s9-edit="${key}"[^>]*>)[\\s\\S]*?(<\\/)`),
+            `$1${value}$2`,
+          )
+        }
+      }
+
+      return NextResponse.json({ html: finalHtml, css })
+    } catch (err: unknown) {
+      const status = (err as { status?: number })?.status
+      console.log(`[build/generate-template] ${models[mi]} failed (${status})`)
+      if (mi < models.length - 1) continue
+      return NextResponse.json({ error: "AI is busy. Please try again in a moment." }, { status: 502 })
+    }
   }
+  return NextResponse.json({ error: "Could not generate content. Please try again." }, { status: 502 })
 }

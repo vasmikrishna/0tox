@@ -69,7 +69,7 @@ export default async function TenantsPage() {
                       <Badge variant="outline" className="capitalize">{t.plan}</Badge>
                     </div>
                     <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
-                      <span className="font-mono">{t.slug}.0tox.com</span>
+                      <span className="font-mono">{t.slug}.site9.in</span>
                       <span>·</span>
                       <span>{INDUSTRY_LABELS[t.industry] ?? t.industry}</span>
                       <span>·</span>

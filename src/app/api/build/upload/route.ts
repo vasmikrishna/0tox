@@ -37,7 +37,11 @@ export async function POST(req: Request) {
 
   try {
     const result = await uploadToR2(file, `builder/${owner.tenant.id}`)
-    return NextResponse.json({ url: result.url })
+    // Return an absolute URL so it works inside the sandboxed iframe
+    // (sandbox="" has no origin, so relative URLs don't resolve)
+    const base = process.env.NEXT_PUBLIC_APP_URL || `${req.headers.get("x-forwarded-proto") || "http"}://${req.headers.get("host")}`
+    const absoluteUrl = `${base}${result.url}`
+    return NextResponse.json({ url: absoluteUrl })
   } catch {
     return NextResponse.json({ error: "Could not upload image." }, { status: 500 })
   }

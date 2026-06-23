@@ -58,7 +58,7 @@ export default async function SuperAdminDashboard() {
                     <Badge variant="outline">{t.plan}</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    <span className="font-mono">{t.slug}.0tox.com</span>
+                    <span className="font-mono">{t.slug}.site9.in</span>
                     <span className="mx-2">·</span>
                     <span className="capitalize">{t.industry.replace("_", " ")}</span>
                     <span className="mx-2">·</span>

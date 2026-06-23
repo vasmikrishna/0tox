@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { getSiteSettings, s } from "@/lib/site-settings"
 import { sendEmail } from "@/lib/email"
+import { getCurrentTenant } from "@/lib/tenant"
 
 export async function POST(req: Request) {
   try {
@@ -20,13 +21,16 @@ export async function POST(req: Request) {
       null
 
     // 1. Save to DB
+    const tenant = await getCurrentTenant().catch(() => null)
     const supabase = createClient()
     const { error } = await (supabase as any).from("contact_enquiries").insert({
+      tenant_id: tenant?.id ?? null,
       name,
       email,
       phone: phone || null,
       service: service || null,
       message,
+      source: "contact_page",
       ip_address: ipAddress,
       user_agent: userAgent,
     })

@@ -309,6 +309,75 @@ export interface CartItem {
   manage_stock: boolean
 }
 
+// ── Builder Content Management Types ────────────────────────────────────────
+
+export type ContentStatus = "draft" | "approved" | "archived"
+
+export type SectionType =
+  | "hero"
+  | "about"
+  | "services"
+  | "testimonials"
+  | "pricing"
+  | "faq"
+  | "team"
+  | "gallery"
+  | "cta"
+  | "footer"
+  | "contact"
+
+export interface SectionTemplate {
+  id: string
+  name: string
+  section_type: SectionType
+  description: string
+  html: string
+  css: string
+  preview_url: string | null
+  tags: string[]
+  sort_order: number
+  status: ContentStatus
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ColorPaletteColors {
+  primary: string
+  secondary: string
+  accent: string
+  background: string
+  text: string
+  muted: string
+}
+
+export interface ReferenceSite {
+  id: string
+  name: string
+  description: string
+  industry: string
+  html: string
+  css: string
+  thumbnail_url: string | null
+  sort_order: number
+  status: ContentStatus
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ColorPalette {
+  id: string
+  name: string
+  colors: ColorPaletteColors
+  industry: string
+  sort_order: number
+  status: ContentStatus
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
 // ── Page Builder Types ───────────────────────────────────────────────────────
 
 export type CustomPageStatus = "draft" | "published"

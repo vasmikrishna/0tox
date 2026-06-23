@@ -8,18 +8,20 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import {
   ArrowLeft, Save, Trash2, Eye, ExternalLink, Home,
-  Wand2, Code2, MousePointerClick, Upload, ImageIcon,
+  Wand2, Code2, MousePointerClick, Upload, ImageIcon, Link2,
+  Monitor, Tablet, Smartphone,
 } from "lucide-react"
 import type { CustomPage } from "@/types"
 import { PAGE_TEMPLATES, getTemplate } from "@/lib/page-templates"
 import { sanitizeHtml, sanitizeCss } from "@/lib/sanitize-html"
-import { buildEditorSrcDoc } from "@/lib/editor-inject"
+import { EDITOR_OVERLAY_CSS, EDITOR_SCRIPT } from "@/lib/editor-inject"
 
 interface SelectedEl {
   editKey: string
   content: string
   tagName: string
-  s9Type: "text" | "image"
+  s9Type: "text" | "image" | "link"
+  href?: string
 }
 
 export function PageEditor({ page, demoMode }: { page: CustomPage; demoMode: boolean }) {
@@ -35,6 +37,7 @@ export function PageEditor({ page, demoMode }: { page: CustomPage; demoMode: boo
   const [error, setError] = useState("")
   const [insertKey, setInsertKey] = useState("")
   const [showCode, setShowCode] = useState(false)
+  const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop")
 
   // Visual editor state
   const [selectedEl, setSelectedEl] = useState<SelectedEl | null>(null)
@@ -46,7 +49,19 @@ export function PageEditor({ page, demoMode }: { page: CustomPage; demoMode: boo
   const hasEditMarkers = html.includes("data-s9-edit")
 
   const srcDoc = useMemo(() => {
-    if (hasEditMarkers) return buildEditorSrcDoc(html, css)
+    if (hasEditMarkers) {
+      // Full HTML document from AI — inject editor CSS + script inline
+      let doc = html
+      if (doc.includes("</head>")) {
+        doc = doc.replace("</head>", `<style>${EDITOR_OVERLAY_CSS}</style></head>`)
+      }
+      if (doc.includes("</body>")) {
+        doc = doc.replace("</body>", `<script>${EDITOR_SCRIPT}</script></body>`)
+      } else {
+        doc += `<script>${EDITOR_SCRIPT}</script>`
+      }
+      return doc
+    }
     const safeCss = sanitizeCss(css)
     const safeHtml = sanitizeHtml(html)
     return `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0}${safeCss}</style></head><body>${safeHtml}</body></html>`
@@ -57,7 +72,8 @@ export function PageEditor({ page, demoMode }: { page: CustomPage; demoMode: boo
     const d = e.data
     if (!d || typeof d.type !== "string" || !d.type.startsWith("s9:")) return
     if (d.type === "s9:select") {
-      setSelectedEl({ editKey: d.editKey, content: d.content, tagName: d.tagName, s9Type: d.s9Type === "image" ? "image" : "text" })
+      const s9Type = d.s9Type === "image" ? "image" as const : d.s9Type === "link" ? "link" as const : "text" as const
+      setSelectedEl({ editKey: d.editKey, content: d.content, tagName: d.tagName, s9Type, href: d.href || "" })
     } else if (d.type === "s9:deselect") {
       setSelectedEl(null)
     } else if (d.type === "s9:html") {
@@ -155,15 +171,16 @@ export function PageEditor({ page, demoMode }: { page: CustomPage; demoMode: boo
     if (!aiPrompt.trim()) return
     setAiLoading(true); setError("")
     try {
-      const res = await fetch("/api/build/generate", {
+      const res = await fetch("/api/build/ai", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ details: { name: title || "My Page", about: aiPrompt } }),
+        body: JSON.stringify({
+          prompt: aiPrompt,
+          currentHtml: html.length > 100 ? html : undefined,
+        }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setError(data.error ?? "AI generation failed"); return }
-      if (data.html) setHtml(data.html)
-      if (data.css) setCss(data.css)
-      if (data.raw) { setHtml(data.raw); setCss("") }
+      if (data.html) { setHtml(data.html); setCss("") }
       setAiPrompt(""); markDirty()
     } catch { setError("Could not reach AI.") }
     finally { setAiLoading(false) }
@@ -252,16 +269,46 @@ export function PageEditor({ page, demoMode }: { page: CustomPage; demoMode: boo
       {/* Visual editor + panel / code */}
       <div className="flex flex-col gap-4 lg:flex-row">
         {/* Preview */}
-        <div className="flex-1 overflow-hidden rounded-xl border border-border bg-white">
-          <iframe
-            ref={iframeRef}
-            data-testid="page-preview-iframe"
-            title="Page preview"
-            srcDoc={srcDoc}
-            sandbox={hasEditMarkers ? "allow-scripts" : ""}
-            className="w-full border-0"
-            style={{ height: "600px" }}
-          />
+        <div className="flex-1 overflow-hidden rounded-xl border border-border">
+          {/* Viewport switcher */}
+          <div className="flex items-center gap-1 border-b border-border bg-muted/50 px-3 py-2">
+            {([
+              { key: "desktop" as const, icon: Monitor, label: "Desktop" },
+              { key: "tablet" as const, icon: Tablet, label: "Tablet" },
+              { key: "mobile" as const, icon: Smartphone, label: "Mobile" },
+            ]).map(({ key, icon: Icon, label }) => (
+              <button
+                key={key}
+                data-testid={`viewport-${key}`}
+                onClick={() => setViewport(key)}
+                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  viewport === key
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="flex justify-center bg-muted/30 p-4" style={{ minHeight: "600px" }}>
+            <iframe
+              ref={iframeRef}
+              data-testid="page-preview-iframe"
+              title="Page preview"
+              srcDoc={srcDoc}
+              sandbox={hasEditMarkers ? "allow-scripts" : ""}
+              className="border-0 bg-white transition-all duration-300"
+              style={{
+                width: viewport === "desktop" ? "100%" : viewport === "tablet" ? "768px" : "375px",
+                maxWidth: "100%",
+                height: "600px",
+                borderRadius: viewport !== "desktop" ? "8px" : undefined,
+                boxShadow: viewport !== "desktop" ? "0 4px 24px rgba(0,0,0,0.12)" : undefined,
+              }}
+            />
+          </div>
         </div>
 
         {/* Right panel */}
@@ -333,11 +380,14 @@ function VisualEditorInner({
 }) {
   const [editValue, setEditValue] = useState(selected.content)
   const [imageUrl, setImageUrl] = useState(selected.s9Type === "image" ? selected.content : "")
+  const [linkHref, setLinkHref] = useState(selected.href ?? "")
   const [aiInstruction, setAiInstruction] = useState("")
   const [aiLoading, setAiLoading] = useState(false)
   const [uploadLoading, setUploadLoading] = useState(false)
   const [err, setErr] = useState("")
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const isLink = selected.s9Type === "link" || selected.tagName === "a" || !!selected.href
 
   async function aiRewrite() {
     if (!aiInstruction.trim()) return
@@ -376,10 +426,23 @@ function VisualEditorInner({
       </div>
       {err && <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">{err}</p>}
 
-      {selected.s9Type === "text" && (
+      {(selected.s9Type === "text" || selected.s9Type === "link") && (
         <>
           <Textarea rows={5} value={editValue} onChange={(e) => setEditValue(e.target.value)} className="text-sm" />
-          <Button size="sm" variant="brand" onClick={() => onUpdate(selected.editKey, editValue)}>Update</Button>
+          <Button size="sm" variant="brand" onClick={() => onUpdate(selected.editKey, editValue)}>Update text</Button>
+
+          {isLink && (
+            <div className="border-t border-border pt-3">
+              <p className="mb-2 text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                <Link2 className="h-3.5 w-3.5" /> Link URL
+              </p>
+              <div className="flex gap-2">
+                <Input placeholder="https://instagram.com/..." value={linkHref} onChange={(e) => setLinkHref(e.target.value)} className="text-sm" />
+                <Button size="sm" variant="outline" onClick={() => { if (linkHref.trim()) onUpdateAttr(selected.editKey, "href", linkHref.trim()) }}>Set</Button>
+              </div>
+            </div>
+          )}
+
           <div className="border-t border-border pt-3">
             <p className="mb-2 text-xs font-medium text-muted-foreground">AI Rewrite</p>
             <Input placeholder="e.g. Make it shorter…" value={aiInstruction} onChange={(e) => setAiInstruction(e.target.value)} onKeyDown={(e) => e.key === "Enter" && aiRewrite()} />

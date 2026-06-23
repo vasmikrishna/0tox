@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import type { CustomPage } from "@/types"
 import { MOCK_CUSTOM_PAGES } from "@/lib/mock-data"
 import { sanitizeHtml, sanitizeCss } from "@/lib/sanitize-html"
+import { FormHandler } from "@/components/public/form-handler"
 
 const supabaseConfigured = () =>
   process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http") &&
@@ -44,9 +45,9 @@ export default async function CustomPublicPage({ params }: { params: Promise<{ s
   if (!page) notFound()
 
   return (
-    <>
+    <FormHandler>
       <style dangerouslySetInnerHTML={{ __html: sanitizeCss(page.css) }} />
       <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(page.html) }} />
-    </>
+    </FormHandler>
   )
 }

@@ -7,7 +7,7 @@ import { FEATURES } from "@/lib/features"
 import {
   LayoutDashboard, FolderKanban, Plus, Users,
   CreditCard, Image, Sliders, Mail, LogOut, ChevronRight, UserCheck, ClipboardList,
-  Building2, ChevronsUpDown, Check, Package, ShoppingCart, LayoutTemplate, CalendarClock
+  Building2, ChevronsUpDown, Check, Package, ShoppingCart, LayoutTemplate, CalendarClock, Globe
 } from "lucide-react"
 
 interface NavItem {
@@ -36,6 +36,7 @@ const adminNav: NavItem[] = [
   { label: "Orders", href: "/admin/orders", icon: ShoppingCart },
   { label: "Pages", href: "/admin/pages", icon: LayoutTemplate },
   { label: "Portfolio", href: "/admin/portfolio", icon: Image },
+  { label: "Domain", href: "/admin/config/domain", icon: Globe },
   { label: "Config", href: "/admin/config/intake", icon: Sliders },
 ]
 

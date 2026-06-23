@@ -68,6 +68,23 @@ export async function uploadToR2(file: File, folder: string) {
   }
 }
 
+export async function uploadBufferToR2(buffer: Buffer, key: string, contentType: string) {
+  if (!isR2Configured()) {
+    throw new Error("Cloudflare R2 is not configured")
+  }
+
+  const bucket = env("R2_BUCKET_NAME") ?? ""
+  await getR2Client().send(new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    Body: buffer,
+    ContentType: contentType,
+    CacheControl: "max-age=31536000",
+  }))
+
+  return appFileUrl(key)
+}
+
 export async function getR2Object(key: string) {
   if (!isR2Configured()) {
     throw new Error("Cloudflare R2 is not configured")

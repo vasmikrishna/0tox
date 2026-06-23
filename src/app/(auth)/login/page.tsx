@@ -21,7 +21,7 @@ function getSubdomainSlug(): string | null {
   if (typeof window === "undefined") return null
   const host = window.location.hostname
   if (host === "localhost" || host === "127.0.0.1") return null
-  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN ?? "0tox.com"
+  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN ?? "site9.in"
   if (host.endsWith(`.${baseDomain}`)) return host.slice(0, host.length - baseDomain.length - 1) || null
   if (host.endsWith(".localhost")) return host.slice(0, host.lastIndexOf(".localhost")) || null
   return null
@@ -33,7 +33,9 @@ function getDevTenantCookie() {
   return match?.[1] ?? "0tox"
 }
 
-function dashboardFor(role: string) {
+function dashboardFor(role: string, onboardingComplete?: boolean, superadmin?: boolean) {
+  if (superadmin) return "/superadmin"
+  if (onboardingComplete === false) return "/build"
   if (role === "admin") return "/admin/dashboard"
   if (role === "employee") return "/employee/dashboard"
   return "/client/dashboard"
@@ -120,7 +122,7 @@ export default function LoginPage() {
       return
     }
 
-    router.push(dashboardFor(data.role))
+    router.push(dashboardFor(data.role, data.onboarding_complete, data.superadmin))
     router.refresh()
   }
 
@@ -134,7 +136,7 @@ export default function LoginPage() {
     const data = await res.json()
     setSwitchingId(null)
     if (!res.ok) { setError(data.error ?? "Failed to switch"); return }
-    router.push(dashboardFor(data.role))
+    router.push(dashboardFor(data.role, data.onboarding_complete))
     router.refresh()
   }
 
@@ -167,7 +169,7 @@ export default function LoginPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm">{ws.name}</p>
-                  <p className="text-xs text-muted-foreground font-mono">{ws.slug}.0tox.com · <span className="capitalize">{ws.role}</span></p>
+                  <p className="text-xs text-muted-foreground font-mono">{ws.slug}.site9.in · <span className="capitalize">{ws.role}</span></p>
                 </div>
                 {switchingId === ws.tenantId
                   ? <div className="h-4 w-4 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin shrink-0" />
@@ -200,7 +202,7 @@ export default function LoginPage() {
               <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               <span className="text-muted-foreground text-xs">Signing into</span>
               <span className="font-semibold">{tenantName}</span>
-              <span className="text-xs text-muted-foreground font-mono ml-auto">{subdomainSlug}.0tox.com</span>
+              <span className="text-xs text-muted-foreground font-mono ml-auto">{subdomainSlug}.site9.in</span>
               <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
             </div>
           ) : (
@@ -213,7 +215,7 @@ export default function LoginPage() {
                   <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                   <span className="text-muted-foreground text-xs shrink-0">Tenant:</span>
                   <span className="font-medium truncate">{tenantName || activeTenant}</span>
-                  <span className="text-xs text-muted-foreground font-mono shrink-0">({displaySlug}.0tox.com)</span>
+                  <span className="text-xs text-muted-foreground font-mono shrink-0">({displaySlug}.site9.in)</span>
                 </div>
                 <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               </button>

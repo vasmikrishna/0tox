@@ -87,7 +87,7 @@ export default function TenantDetailPage() {
   }
 
   function copyUrl() {
-    navigator.clipboard.writeText(`https://${tenant.slug}.0tox.com`)
+    navigator.clipboard.writeText(`https://${tenant.slug}.site9.in`)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -103,7 +103,7 @@ export default function TenantDetailPage() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold">{tenant.name}</h1>
-          <p className="text-muted-foreground text-sm font-mono">{tenant.slug}.0tox.com</p>
+          <p className="text-muted-foreground text-sm font-mono">{tenant.slug}.site9.in</p>
         </div>
       </div>
 
@@ -112,7 +112,7 @@ export default function TenantDetailPage() {
         <CardContent className="py-4 flex items-center justify-between gap-4">
           <div>
             <p className="text-xs text-muted-foreground mb-0.5">Portal URL</p>
-            <p className="font-mono text-sm">{tenant.slug}.0tox.com</p>
+            <p className="font-mono text-sm">{tenant.slug}.site9.in</p>
             <p className="text-xs text-muted-foreground mt-0.5">Dev: <span className="font-mono">{tenant.slug}.localhost:3001</span></p>
           </div>
           <div className="flex gap-2">
@@ -141,7 +141,7 @@ export default function TenantDetailPage() {
               <Label>Subdomain slug</Label>
               <div className="flex items-center gap-2">
                 <Input value={tenant.slug} onChange={e => setTenant((t: any) => ({ ...t, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") }))} className="font-mono" />
-                <span className="text-xs text-muted-foreground shrink-0">.0tox.com</span>
+                <span className="text-xs text-muted-foreground shrink-0">.site9.in</span>
               </div>
             </div>
           </div>

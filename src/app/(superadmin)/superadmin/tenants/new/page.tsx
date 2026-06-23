@@ -75,7 +75,7 @@ export default function NewTenantPage() {
         <Card>
           <CardContent className="pt-5 space-y-3">
             <div><p className="text-xs text-muted-foreground">Company name</p><p className="font-medium">{result.tenant.name}</p></div>
-            <div><p className="text-xs text-muted-foreground">Portal URL</p><p className="font-mono text-sm">{result.tenant.slug}.0tox.com</p></div>
+            <div><p className="text-xs text-muted-foreground">Portal URL</p><p className="font-mono text-sm">{result.tenant.slug}.site9.in</p></div>
             <div><p className="text-xs text-muted-foreground">Industry</p><p className="font-medium capitalize">{result.tenant.industry.replace("_", " ")}</p></div>
             <div><p className="text-xs text-muted-foreground">Auto-created</p>
               <ul className="text-sm mt-1 space-y-0.5">
@@ -114,7 +114,7 @@ export default function NewTenantPage() {
               <Label>Subdomain slug *</Label>
               <div className="flex items-center gap-2">
                 <Input value={form.slug} onChange={e => set("slug", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} placeholder="acme" className="font-mono" />
-                <span className="text-sm text-muted-foreground shrink-0">.0tox.com</span>
+                <span className="text-sm text-muted-foreground shrink-0">.site9.in</span>
               </div>
             </div>
             <div className="space-y-1.5">

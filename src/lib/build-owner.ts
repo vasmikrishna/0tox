@@ -11,7 +11,9 @@ export async function getOwnerContext(): Promise<{
   tenant: Tenant
 } | null> {
   const session = await getSession()
-  if (!session?.tenant_id || session.role === "admin") return null
+  // Block the super-admin (env-based hardcoded login with id="admin"),
+  // but allow DB users who happen to have role="admin" on their tenant.
+  if (!session?.tenant_id || session.id === "admin") return null
   const tenant = await getTenantById(session.tenant_id)
   if (!tenant) return null
   return { session, tenant }

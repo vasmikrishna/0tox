@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     }
     const split = splitAiHtml(raw)
     if (!split.html) return NextResponse.json({ error: "That doesn't look like valid HTML" }, { status: 400 })
-    html = split.html
+    html = stripEditorMarkers(split.html)
     css = split.css
     template = "ai"
   }

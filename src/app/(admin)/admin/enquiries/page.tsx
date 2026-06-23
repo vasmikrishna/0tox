@@ -10,11 +10,13 @@ type Enquiry = {
   service: string | null
   message: string
   status: "new" | "read" | "replied" | "archived"
+  source: string | null
   admin_note: string | null
   ip_address: string | null
   user_agent: string | null
   created_at: string
   updated_at: string
+  tenants?: { name: string; slug: string } | null
 }
 
 type Counts = { new: number; read: number; replied: number; archived: number; all: number }
@@ -130,7 +132,7 @@ export default function EnquiriesPage() {
         <div>
           <h1 className="text-2xl font-bold">Enquiries</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Messages submitted via the public contact form.
+            Messages from your website visitors and contact forms.
           </p>
         </div>
         <button
@@ -219,16 +221,26 @@ export default function EnquiriesPage() {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground truncate">{e.email}</p>
+                  {e.tenants?.name && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{e.tenants.name}</p>
+                  )}
                   <p className="text-xs text-muted-foreground line-clamp-2 mt-1.5">
                     {e.message}
                   </p>
                   <div className="flex items-center justify-between mt-2 text-[11px] text-muted-foreground">
                     <span>{formatRelative(e.created_at)}</span>
-                    {e.service && (
-                      <span className="px-1.5 py-0.5 rounded bg-accent text-foreground text-[10px]">
-                        {SERVICE_LABELS[e.service]?.split(" ")[0] ?? e.service}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {e.source === "website_form" && (
+                        <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-[10px]">
+                          Website
+                        </span>
+                      )}
+                      {e.service && (
+                        <span className="px-1.5 py-0.5 rounded bg-accent text-foreground text-[10px]">
+                          {SERVICE_LABELS[e.service]?.split(" ")[0] ?? e.service}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </button>
               ))}
@@ -262,9 +274,16 @@ export default function EnquiriesPage() {
                       )}
                     </div>
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusBadge(selected.status)}`}>
-                    {selected.status}
-                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {selected.tenants?.name && (
+                      <span className="text-xs px-2 py-1 rounded-full font-medium bg-purple-100 text-purple-700">
+                        {selected.tenants.name}
+                      </span>
+                    )}
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusBadge(selected.status)}`}>
+                      {selected.status}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Action bar */}
@@ -354,6 +373,14 @@ export default function EnquiriesPage() {
                     </div>
                   </Field>
                 )}
+
+                <Field label="Source">
+                  <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full font-medium ${
+                    selected.source === "website_form" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700"
+                  }`}>
+                    {selected.source === "website_form" ? "Website Form" : selected.source === "contact_page" ? "Contact Page" : "Contact Form"}
+                  </span>
+                </Field>
 
                 <Field label="Service interested in">
                   {selected.service ? SERVICE_LABELS[selected.service] ?? selected.service : <span className="text-muted-foreground italic">Not specified</span>}

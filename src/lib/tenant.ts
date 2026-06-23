@@ -14,6 +14,8 @@ export interface Tenant {
   contact_email?: string
   settings?: Record<string, unknown>
   onboarding_complete?: boolean
+  custom_domain?: string | null
+  domain_verified?: boolean
   created_at: string
 }
 

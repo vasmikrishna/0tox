@@ -8,6 +8,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
   const tenantId = session.tenant_id
+  const isSuperAdmin = session.id === "admin"
 
   try {
     const { searchParams } = new URL(req.url)
@@ -16,9 +17,13 @@ export async function GET(req: Request) {
     const supabase = createClient()
     let query = (supabase as any)
       .from("contact_enquiries")
-      .select("*")
-      .eq("tenant_id", tenantId)
+      .select("*, tenants(name, slug)")
       .order("created_at", { ascending: false })
+
+    // Super admin sees all tenants; regular admin sees only their own
+    if (!isSuperAdmin) {
+      query = query.eq("tenant_id", tenantId)
+    }
 
     if (status && status !== "all") {
       query = query.eq("status", status)
@@ -28,10 +33,13 @@ export async function GET(req: Request) {
     if (error) throw error
 
     // Counts by status (for tabs)
-    const { data: countData } = await (supabase as any)
+    let countQuery = (supabase as any)
       .from("contact_enquiries")
       .select("status")
-      .eq("tenant_id", tenantId)
+    if (!isSuperAdmin) {
+      countQuery = countQuery.eq("tenant_id", tenantId)
+    }
+    const { data: countData } = await countQuery
 
     const counts = { new: 0, read: 0, replied: 0, archived: 0, all: 0 }
     for (const row of (countData ?? []) as { status: string }[]) {

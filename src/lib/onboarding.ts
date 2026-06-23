@@ -15,6 +15,17 @@ export interface BusinessDetails {
   email?: string
   hours?: string
   services?: string[]
+  reference_site_id?: string
+  color_palette_id?: string
+  custom_colors?: {
+    primary: string
+    secondary: string
+    accent: string
+    background: string
+    text: string
+    muted: string
+  }
+  logo_url?: string
 }
 
 /** The base domain used for the free subdomain (yourbusiness.<base>). */

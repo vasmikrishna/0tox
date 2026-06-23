@@ -7,6 +7,7 @@ import { MOCK_PORTFOLIO, MOCK_CUSTOM_PAGES } from "@/lib/mock-data"
 import type { CustomPage } from "@/types"
 import { sanitizeHtml, sanitizeCss } from "@/lib/sanitize-html"
 import { FEATURES } from "@/lib/features"
+import { FormHandler } from "@/components/public/form-handler"
 
 const supabaseConfigured = () =>
   process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http") &&
@@ -19,16 +20,21 @@ async function getHomepageOverride(): Promise<CustomPage | null> {
   }
   try {
     const { createClient } = await import("@/lib/supabase/server")
-    const { getCurrentTenant } = await import("@/lib/tenant")
+    const { getCurrentTenant, getTenantSlug } = await import("@/lib/tenant")
+    const slug = await getTenantSlug()
+    // Don't override the main marketing page — only show tenant homepages
+    // on real subdomains (not the localhost fallback "0tox" tenant)
+    if (slug === "0tox" || !slug) return null
     const supabase = await createClient()
     const tenant = await getCurrentTenant().catch(() => null)
-    let query = supabase
+    if (!tenant?.id) return null
+    const { data } = await supabase
       .from("custom_pages")
       .select("*")
       .eq("is_homepage", true)
       .eq("status", "published")
-    if (tenant?.id) query = query.eq("tenant_id", tenant.id)
-    const { data } = await query.maybeSingle()
+      .eq("tenant_id", tenant.id)
+      .maybeSingle()
     return (data as CustomPage | null) ?? null
   } catch {
     return null
@@ -120,10 +126,10 @@ export default async function LandingPage() {
   const homepageOverride = await getHomepageOverride()
   if (homepageOverride) {
     return (
-      <>
+      <FormHandler>
         <style dangerouslySetInnerHTML={{ __html: sanitizeCss(homepageOverride.css) }} />
         <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(homepageOverride.html) }} />
-      </>
+      </FormHandler>
     )
   }
 
