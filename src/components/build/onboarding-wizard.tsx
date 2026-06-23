@@ -753,8 +753,13 @@ export function OnboardingWizard({ initialDetails, onComplete }: OnboardingWizar
                   </div>
                 </div>
                 <div>
-                  <Label>About</Label>
+                  <Label>About *</Label>
                   <Textarea value={about} onChange={(e) => setAbout(e.target.value)} rows={3} placeholder="Tell us about your business..." data-testid="wizard-about" />
+                  {!about.trim() && (
+                    <p className="mt-1 text-xs text-muted-foreground" data-testid="wizard-about-hint">
+                      An About description is required to generate your site.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label>Services (comma-separated)</Label>
@@ -838,7 +843,7 @@ export function OnboardingWizard({ initialDetails, onComplete }: OnboardingWizar
                 variant="brand"
                 size="lg"
                 className="w-full"
-                disabled={generating || !name.trim()}
+                disabled={generating || !name.trim() || !about.trim()}
                 onClick={handleGenerate}
                 data-testid="wizard-generate-btn"
               >
@@ -875,6 +880,7 @@ export function OnboardingWizard({ initialDetails, onComplete }: OnboardingWizar
           {step < 5 ? (
             <Button
               variant="brand"
+              disabled={step === 4 && (!name.trim() || !about.trim())}
               onClick={() => goToStep((step + 1) as WizardStep)}
               data-testid="wizard-next"
             >
