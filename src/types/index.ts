@@ -364,6 +364,10 @@ export interface ReferenceSite {
   created_by: string | null
   created_at: string
   updated_at: string
+  /** Which source the item came from: curated reference sites vs the larger template gallery. */
+  source?: "reference" | "gallery"
+  /** Optional visual style label (e.g. "modern", "dark") — only set for gallery templates. */
+  style?: string
 }
 
 export interface ColorPalette {
@@ -392,6 +396,31 @@ export interface CustomPage {
   template: string
   status: CustomPageStatus
   is_homepage: boolean
+  created_at: string
+  updated_at?: string
+}
+
+export type BlogPostStatus = "draft" | "published"
+
+export interface BlogPost {
+  id: string
+  tenant_id?: string | null
+  slug: string
+  title: string
+  excerpt: string
+  content_html: string
+  content_json?: unknown
+  cover_image_url?: string | null
+  author_name?: string | null
+  tags: string[]
+  status: BlogPostStatus
+  // SEO
+  meta_title?: string | null
+  meta_description?: string | null
+  og_image_url?: string | null
+  canonical_url?: string | null
+  noindex: boolean
+  published_at?: string | null
   created_at: string
   updated_at?: string
 }

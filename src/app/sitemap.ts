@@ -41,7 +41,42 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     await appendCustomPageUrls(entries, origin, tenant?.id ?? null)
   }
 
+  if (FEATURES.blog) {
+    entries.push({ url: `${origin}/blog`, lastModified: now, changeFrequency: "weekly", priority: 0.7 })
+    await appendBlogUrls(entries, origin, tenant?.id ?? null)
+  }
+
   return entries
+}
+
+async function appendBlogUrls(
+  entries: MetadataRoute.Sitemap,
+  origin: string,
+  tenantId: string | null,
+) {
+  try {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http")) return
+    const { createClient } = await import("@/lib/supabase/server")
+    const supabase = await createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- blog_posts not in generated DB types
+    let query = (supabase as any)
+      .from("blog_posts")
+      .select("slug, updated_at")
+      .eq("status", "published")
+    if (tenantId) query = query.eq("tenant_id", tenantId)
+    const { data } = await query
+    const rows = (data ?? []) as { slug: string; updated_at: string | null }[]
+    for (const post of rows) {
+      entries.push({
+        url: `${origin}/blog/${post.slug}`,
+        lastModified: post.updated_at ? new Date(post.updated_at) : new Date(),
+        changeFrequency: "weekly",
+        priority: 0.6,
+      })
+    }
+  } catch {
+    /* Supabase unavailable — skip dynamic blog posts */
+  }
 }
 
 async function appendProductUrls(

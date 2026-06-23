@@ -50,3 +50,38 @@ export function buildWebSiteJsonLd(canonicalOrigin: string, name: string) {
     url: canonicalOrigin,
   }
 }
+
+export interface ArticleJsonLdInput {
+  url: string
+  headline: string
+  description?: string | null
+  image?: string | null
+  authorName?: string | null
+  publisherName: string
+  publisherLogo?: string | null
+  datePublished?: string | null
+  dateModified?: string | null
+}
+
+export function buildArticleJsonLd(input: ArticleJsonLdInput) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    mainEntityOfPage: { "@type": "WebPage", "@id": input.url },
+    headline: input.headline,
+    ...(input.description ? { description: input.description } : {}),
+    ...(input.image ? { image: input.image } : {}),
+    ...(input.authorName
+      ? { author: { "@type": "Person", name: input.authorName } }
+      : {}),
+    publisher: {
+      "@type": "Organization",
+      name: input.publisherName,
+      ...(input.publisherLogo
+        ? { logo: { "@type": "ImageObject", url: input.publisherLogo } }
+        : {}),
+    },
+    ...(input.datePublished ? { datePublished: input.datePublished } : {}),
+    ...(input.dateModified ? { dateModified: input.dateModified } : {}),
+  }
+}

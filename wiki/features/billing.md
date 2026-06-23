@@ -21,12 +21,18 @@ ids stored in env.
 | Area | Path |
 |------|------|
 | Upsell banner | `src/components/build/upgrade-banner.tsx` (rendered in the builder) |
+| **Manage subscription** | `/admin/billing` — plan, status, renewal, change-plan, cancel, invoices (`billing-client.tsx`) |
 | Start subscription | `POST /api/billing/subscribe` |
 | Verify after Checkout | `POST /api/billing/verify` |
-| Lifecycle webhook | `POST /api/billing/webhook` |
-| Status | `GET /api/billing/status` |
+| Change plan | `POST /api/billing/change-plan` (cancels current, starts new) |
+| Cancel | `POST /api/billing/cancel` (at period end) |
+| Invoice history | `GET /api/billing/invoices` |
+| Lifecycle webhook | `POST /api/billing/webhook` (records charges → `subscription_invoices`, sends receipt/failed emails) |
+| Status | `GET /api/billing/status` (incl. `cancelAtPeriodEnd`) |
+| Reusable Checkout hook | `src/hooks/use-razorpay-checkout.ts` |
+| Receipt / dunning emails | `src/lib/email/billing.ts` |
 | Razorpay client/plans/signatures | `src/lib/razorpay.ts` |
-| Entitlement + upserts | `src/lib/subscription.ts` |
+| Entitlement + invoices + upserts | `src/lib/subscription.ts` |
 | Plan setup (run once) | `src/scripts/razorpay-setup.ts` |
 
 ## Flow
@@ -49,7 +55,9 @@ ids stored in env.
    `subscription.*` events and the same `RAZORPAY_WEBHOOK_SECRET`.
 
 ## Notes / future
-- Apply migration `013_subscriptions.sql` (grants added, RLS left disabled to match existing tables).
+- Apply migrations `013_subscriptions.sql` **and** `015_subscription_invoices.sql` (grants added, RLS left disabled to match existing tables).
+- In the Razorpay dashboard webhook, also enable `subscription.charged` / `invoice.paid` (for invoice records + receipts) and `subscription.halted` (dunning email).
 - Coexists with the existing **Stripe** flows (project/store payments) — Razorpay is for INR subscriptions.
 - To make it a **hard gate** later, check `isSubscriptionActive` in `POST /api/build/publish`.
-- Not yet built: billing history / invoices page, plan switching/proration, cancel-from-portal UI, and the perks the subscription unlocks (badge removal wiring).
+- **Now built:** manage page (`/admin/billing`), cancel (at period end), change plan, invoice/receipt history, receipt + payment-failed emails.
+- Still future: proration on plan change (currently cancel-and-restart), the perks the subscription unlocks (badge removal wiring).

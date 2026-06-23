@@ -16,8 +16,27 @@ export interface Subscription {
   razorpay_customer_id: string | null
   short_url: string | null
   current_end: string | null
+  cancel_at_period_end: boolean
+  cancelled_at: string | null
   created_at: string
   updated_at: string
+}
+
+/** A recorded subscription charge — one row per Razorpay invoice. */
+export interface SubscriptionInvoice {
+  id: string
+  tenant_id: string
+  subscription_id: string | null
+  razorpay_invoice_id: string | null
+  razorpay_payment_id: string | null
+  amount: number // paise
+  currency: string
+  status: string
+  period_start: string | null
+  period_end: string | null
+  invoice_url: string | null
+  paid_at: string | null
+  created_at: string
 }
 
 /** Razorpay statuses that unlock the "full potential" features. */
@@ -49,6 +68,7 @@ export interface SubscriptionStatus {
   plan: PlanKey | null
   status: string | null
   currentEnd: string | null
+  cancelAtPeriodEnd: boolean
 }
 
 export async function getSubscriptionStatus(tenantId: string): Promise<SubscriptionStatus> {
@@ -58,6 +78,7 @@ export async function getSubscriptionStatus(tenantId: string): Promise<Subscript
     plan: sub?.plan ?? null,
     status: sub?.status ?? null,
     currentEnd: sub?.current_end ?? null,
+    cancelAtPeriodEnd: sub?.cancel_at_period_end ?? false,
   }
 }
 
@@ -79,7 +100,12 @@ export async function upsertSubscription(
 /** Update a subscription row by its Razorpay id (used by the webhook). */
 export async function updateSubscriptionByRazorpayId(
   razorpaySubscriptionId: string,
-  fields: { status?: string; current_end?: string | null },
+  fields: {
+    status?: string
+    current_end?: string | null
+    cancel_at_period_end?: boolean
+    cancelled_at?: string | null
+  },
 ): Promise<void> {
   const supabase = createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- hand-written DB types
@@ -87,4 +113,57 @@ export async function updateSubscriptionByRazorpayId(
     .from("subscriptions")
     .update(fields)
     .eq("razorpay_subscription_id", razorpaySubscriptionId)
+}
+
+/**
+ * Record a subscription charge. Idempotent on razorpay_invoice_id — a repeated
+ * webhook for the same invoice is ignored. Returns true if a new row was added.
+ */
+export async function recordInvoice(
+  tenantId: string,
+  fields: Partial<Omit<SubscriptionInvoice, "id" | "tenant_id" | "created_at">>,
+): Promise<boolean> {
+  const supabase = createClient()
+
+  if (fields.razorpay_invoice_id) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- hand-written DB types
+    const { data: existing } = await (supabase as any)
+      .from("subscription_invoices")
+      .select("id")
+      .eq("razorpay_invoice_id", fields.razorpay_invoice_id)
+      .maybeSingle()
+    if (existing) return false
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- hand-written DB types
+  const { error } = await (supabase as any)
+    .from("subscription_invoices")
+    .insert({ tenant_id: tenantId, ...fields })
+  return !error
+}
+
+/** List a tenant's invoices, newest first. */
+export async function listInvoices(tenantId: string): Promise<SubscriptionInvoice[]> {
+  const supabase = createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- hand-written DB types
+  const { data } = await (supabase as any)
+    .from("subscription_invoices")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .order("created_at", { ascending: false })
+  return (data as SubscriptionInvoice[]) ?? []
+}
+
+/** Find the tenant that owns a given Razorpay subscription id (webhook helper). */
+export async function getTenantIdByRazorpaySubscription(
+  razorpaySubscriptionId: string,
+): Promise<{ tenant_id: string; id: string } | null> {
+  const supabase = createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- hand-written DB types
+  const { data } = await (supabase as any)
+    .from("subscriptions")
+    .select("id, tenant_id")
+    .eq("razorpay_subscription_id", razorpaySubscriptionId)
+    .maybeSingle()
+  return (data as { tenant_id: string; id: string }) ?? null
 }

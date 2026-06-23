@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Added — Blog (per-tenant, all admins)
+- `blog_posts` table (tenant-scoped): title, slug, excerpt, TipTap `content_html` + `content_json`, cover image, author, tags, draft/published, and full SEO fields (`meta_title`, `meta_description`, `og_image_url`, `canonical_url`, `noindex`, `published_at`). RLS disabled + grants per project convention (`016_blog.sql`). Behind `FEATURES.blog` (on for all tenants).
+- Admin **Blog** (`/admin/blog`): list, create, edit, delete. TipTap rich-text editor (`blog-editor.tsx`) with headings/lists/links/formatting, cover-image upload (reuses `/api/build/upload`), tags, and a collapsible SEO panel.
+- **Super-admin oversight** (`/superadmin/blog`): cross-tenant list with publish/unpublish + delete moderation.
+- Public **blog** (`/blog`, `/blog/[slug]`): tenant-scoped index + post pages with `generateMetadata` (canonical/OpenGraph, `noindex` support) and **BlogPosting JSON-LD** (`buildArticleJsonLd` in `lib/seo.ts`). Posts added to `sitemap.ts`; "Blog" link in the public header.
+- API: `GET/POST /api/admin/blog`, `GET/PATCH/DELETE /api/admin/blog/[id]`, `GET /api/superadmin/blog`, `PATCH/DELETE /api/superadmin/blog/[id]`.
+
+### Added — Razorpay billing management (manage / cancel / change plan / invoices / receipts)
+- Tenant **Billing** page (`/admin/billing`): current plan, status, renewal/expiry date, **change plan**, **cancel** (at period end), and **invoice/receipt history**.
+- New `subscription_invoices` table + `cancel_at_period_end` / `cancelled_at` columns on `subscriptions` (`015_subscription_invoices.sql`).
+- API: `POST /api/billing/cancel`, `POST /api/billing/change-plan`, `GET /api/billing/invoices`. `GET /api/billing/status` now returns `cancelAtPeriodEnd`.
+- **Hardened webhook**: records each `subscription.charged` / `invoice.paid` as an invoice (idempotent on `razorpay_invoice_id`) and sends a **receipt email**; sends a **payment-failed email** on `halted`/failed. New `lib/email/billing.ts`; reusable `useRazorpayCheckout` hook.
+
 ### Added — Subscriptions / Razorpay billing (#4)
 - `subscriptions` table (one row per tenant): plan, Razorpay subscription/plan/customer ids, status, `current_end`. RLS disabled + grants per project convention (`013_subscriptions.sql`).
 - **Soft upsell** — publishing is never blocked. Unsubscribed tenants see an `UpgradeBanner` in the builder ("Unlock your site's full potential"); it disappears once a subscription is active.

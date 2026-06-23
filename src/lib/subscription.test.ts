@@ -15,6 +15,8 @@ function sub(overrides: Partial<Subscription>): Subscription {
     razorpay_customer_id: null,
     short_url: null,
     current_end: null,
+    cancel_at_period_end: false,
+    cancelled_at: null,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     ...overrides,

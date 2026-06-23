@@ -79,6 +79,23 @@ export function getRazorpayKeyId(): string {
 }
 
 /**
+ * Cancel a Razorpay subscription. `atCycleEnd=true` keeps it active until the
+ * end of the current paid period; `false` cancels immediately.
+ */
+export async function cancelRazorpaySubscription(
+  subscriptionId: string,
+  atCycleEnd = true,
+) {
+  // razorpay typings accept a boolean "cancel at cycle end" flag.
+  return getRazorpay().subscriptions.cancel(subscriptionId, atCycleEnd)
+}
+
+/** Fetch the live state of a Razorpay subscription. */
+export async function fetchRazorpaySubscription(subscriptionId: string) {
+  return getRazorpay().subscriptions.fetch(subscriptionId)
+}
+
+/**
  * Verify the signature returned by Razorpay Checkout after a subscription
  * authorisation: HMAC_SHA256(payment_id + "|" + subscription_id, key_secret).
  */

@@ -16,6 +16,8 @@ export const FEATURES = {
   pageBuilder: true,
   /** Appointment bookings + calendar blocking (/admin/bookings). */
   bookings: true,
+  /** Per-tenant blog (/admin/blog, /blog, /blog/[slug]). Available to all tenants. */
+  blog: true,
 } as const
 
 export type FeatureKey = keyof typeof FEATURES
