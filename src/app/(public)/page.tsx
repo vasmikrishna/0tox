@@ -154,10 +154,9 @@ export default async function LandingPage() {
       {/* Nav */}
       <header className="border-b border-border sticky top-0 z-50 bg-background/80 backdrop-blur">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5" data-testid="home-logo">
+          <Link href="/" className="flex items-center" data-testid="home-logo">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-mark-dark.svg" alt="" aria-hidden="true" className="h-9 w-auto" />
-            <span className="text-xl font-bold tracking-tight">Site<span className="text-[#2B6BFF]">9</span></span>
+            <img src="/logo-horizontal.svg" alt="Site9" className="h-8 w-auto" />
           </Link>
           <nav className="hidden md:flex items-center gap-6">
             {NAV_LINKS.map(link => (
