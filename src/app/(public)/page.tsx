@@ -156,7 +156,7 @@ export default async function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center" data-testid="home-logo">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-horizontal.svg" alt="Site9" className="h-8 w-auto" />
+            <img src="/site9-logo.png" alt="Site9 — One Website for Every Business" className="h-10 w-auto" />
           </Link>
           <nav className="hidden md:flex items-center gap-6">
             {NAV_LINKS.map(link => (
