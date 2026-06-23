@@ -173,7 +173,7 @@ export function EmployeeDetailsClient({ initialEmployee, initialAssignments }: D
               <CardTitle className="text-base">Edit Profile Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-muted-foreground">Full Name</label>
                   <Input
@@ -193,7 +193,7 @@ export function EmployeeDetailsClient({ initialEmployee, initialAssignments }: D
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-muted-foreground">Job Title</label>
                   <Input

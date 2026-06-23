@@ -31,10 +31,15 @@ export async function POST(req: Request) {
     services: Array.isArray(incoming.services)
       ? incoming.services.map(s => String(s).trim()).filter(Boolean).slice(0, 12)
       : undefined,
+    reference_site_id: str(incoming.reference_site_id),
+    color_palette_id: str(incoming.color_palette_id),
+    custom_colors: incoming.custom_colors,
+    logo_url: str(incoming.logo_url),
   }
 
   const supabase = createClient()
   const settings = { ...(owner.tenant.settings ?? {}), business: details }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- hand-written DB types
   const { error } = await (supabase as any)
     .from("tenants")
     .update({ settings })

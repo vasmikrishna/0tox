@@ -75,7 +75,7 @@ export default async function AdminClientPage({ params }: { params: Promise<{ id
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card><CardContent className="pt-6 pb-5">
           <p className="text-2xl font-bold">{projects.length}</p>
           <p className="text-sm text-muted-foreground mt-1">Projects</p>

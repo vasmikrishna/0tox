@@ -372,7 +372,7 @@ export default function IntakeConfigPage() {
           {adding && (
             <div className="border border-dashed border-border rounded-lg p-4 space-y-3 mt-2">
               <div className="space-y-1.5"><Label>Question label *</Label><Input value={form.label} onChange={e => setForm(p => ({ ...p, label: e.target.value }))} placeholder="e.g. What does your business do?" /></div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label>Type</Label>
                   <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value as IntakeQuestion["type"] }))}

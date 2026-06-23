@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Copy, Check, ExternalLink, Users, Trash2, Save, UserPlus, Eye, EyeOff } from "lucide-react"
+import { ArrowLeft, Copy, Check, ExternalLink, Users, Trash2, Save, UserPlus, Eye, EyeOff, Wand2, Upload, ImageIcon } from "lucide-react"
+import { LOGO_STYLES } from "@/lib/logo-styles"
+import type { LogoOption } from "@/lib/logo-generate"
+import type { BrandAsset } from "@/lib/build-assets"
 
 const INDUSTRY_LABELS: Record<string, string> = {
   software: "Software / Tech", real_estate: "Real Estate", healthcare: "Healthcare",
@@ -39,6 +42,13 @@ export default function TenantDetailPage() {
   const [userError, setUserError] = useState("")
   const [userSuccess, setUserSuccess] = useState("")
 
+  // Logo
+  const [logoStyle, setLogoStyle] = useState<string>(LOGO_STYLES[0]?.id ?? "")
+  const [logoOptions, setLogoOptions] = useState<LogoOption[]>([])
+  const [generatingLogo, setGeneratingLogo] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const logoFileRef = useRef<HTMLInputElement>(null)
+
   useEffect(() => {
     fetch(`/api/superadmin/tenants/${id}`)
       .then(r => r.json())
@@ -59,6 +69,82 @@ export default function TenantDetailPage() {
     setTenant(d.tenant)
     setSuccess("Saved!")
     setTimeout(() => setSuccess(""), 2500)
+  }
+
+  // Persist a fully-computed tenant object via PATCH (used by the logo tools,
+  // which need to save immediately rather than wait for "Save changes").
+  async function persistTenant(next: any) {
+    const res = await fetch(`/api/superadmin/tenants/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(next),
+    })
+    const d = await res.json()
+    if (!res.ok) { setError(d.error ?? "Failed to save logo"); return false }
+    setTenant(d.tenant)
+    setSuccess("Logo updated!")
+    setTimeout(() => setSuccess(""), 2500)
+    return true
+  }
+
+  // Set the tenant's logo everywhere it's read (the logo_url column used for
+  // SEO/OG + the builder's settings.business.logo_url) and remember it in the
+  // brand asset library so it can be reused later.
+  async function applyLogo(url: string, style?: string) {
+    setError("")
+    const settings = (tenant.settings ?? {}) as Record<string, any>
+    const business = { ...(settings.business ?? {}), logo_url: url }
+    const prior: BrandAsset[] = Array.isArray(settings.brand_assets) ? settings.brand_assets : []
+    const deduped = prior.filter((a) => a.url !== url)
+    const asset: BrandAsset = { id: crypto.randomUUID(), url, kind: "logo", style, createdAt: new Date().toISOString() }
+    const brand_assets = [asset, ...deduped].slice(0, 40)
+    const next = { ...tenant, logo_url: url, settings: { ...settings, business, brand_assets } }
+    setTenant(next)
+    setLogoOptions([])
+    await persistTenant(next)
+  }
+
+  async function generateLogos() {
+    setGeneratingLogo(true); setError(""); setLogoOptions([])
+    try {
+      const res = await fetch(`/api/superadmin/tenants/${id}/logo/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessName: tenant.name,
+          category: tenant.industry,
+          colors: { primary: tenant.primary_color, accent: tenant.primary_color },
+          style: logoStyle,
+          count: 2,
+        }),
+      })
+      const d = await res.json()
+      if (!res.ok) { setError(d.error ?? "Logo generation failed"); return }
+      setLogoOptions(d.options ?? [])
+    } catch { setError("Could not generate logo") }
+    finally { setGeneratingLogo(false) }
+  }
+
+  async function uploadLogo(file: File) {
+    setUploadingLogo(true); setError("")
+    try {
+      const fd = new FormData()
+      fd.append("file", file)
+      const res = await fetch(`/api/superadmin/tenants/${id}/logo/upload`, { method: "POST", body: fd })
+      const d = await res.json()
+      if (!res.ok) { setError(d.error ?? "Upload failed"); return }
+      await applyLogo(d.url)
+    } catch { setError("Upload failed") }
+    finally { setUploadingLogo(false) }
+  }
+
+  async function deleteBrandAsset(assetId: string) {
+    const settings = (tenant.settings ?? {}) as Record<string, any>
+    const brand_assets = (Array.isArray(settings.brand_assets) ? settings.brand_assets : [])
+      .filter((a: BrandAsset) => a.id !== assetId)
+    const next = { ...tenant, settings: { ...settings, brand_assets } }
+    setTenant(next)
+    await persistTenant(next)
   }
 
   async function deleteTenant() {
@@ -189,6 +275,108 @@ export default function TenantDetailPage() {
           <div className="flex gap-3 pt-2">
             <Button variant="brand" loading={saving} onClick={save}><Save className="h-4 w-4" /> Save changes</Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Website logo */}
+      <Card>
+        <CardHeader><CardTitle className="flex items-center gap-2"><ImageIcon className="h-4 w-4" /> Website logo</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          {tenant.logo_url && (
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl border bg-white p-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={tenant.logo_url} alt="Current logo" className="max-h-16 max-w-[160px] object-contain" data-testid="superadmin-current-logo" />
+              </div>
+              <p className="text-xs text-muted-foreground">Current logo</p>
+            </div>
+          )}
+
+          {/* Style picker */}
+          <div>
+            <Label className="text-sm font-semibold">Logo style</Label>
+            <div className="mt-2 flex flex-wrap gap-2" data-testid="superadmin-logo-style-picker">
+              {LOGO_STYLES.map((s) => {
+                const active = logoStyle === s.id
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setLogoStyle(s.id)}
+                    data-testid={`superadmin-logo-style-${s.id}`}
+                    aria-pressed={active}
+                    className={`rounded-lg border px-3 py-2 text-left transition-colors ${active ? "border-brand bg-brand/5 ring-1 ring-brand" : "hover:border-brand/60"}`}
+                  >
+                    <p className="text-sm font-medium leading-tight">{s.label}</p>
+                    <p className="text-[11px] text-muted-foreground leading-tight">{s.description}</p>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Button variant="brand" loading={generatingLogo} onClick={generateLogos} data-testid="superadmin-generate-logo-btn">
+              <Wand2 className="h-4 w-4" /> {logoOptions.length || tenant.logo_url ? "Generate new options" : "Generate 2 options"}
+            </Button>
+            <Button variant="outline" loading={uploadingLogo} onClick={() => logoFileRef.current?.click()} data-testid="superadmin-upload-logo-btn">
+              <Upload className="h-4 w-4" /> Upload logo
+            </Button>
+          </div>
+
+          {/* Generated options */}
+          {logoOptions.length > 0 && (
+            <div className="space-y-2" data-testid="superadmin-logo-options">
+              <p className="text-sm font-semibold">Pick the one you like</p>
+              <div className="grid grid-cols-2 gap-3">
+                {logoOptions.map((opt, i) => (
+                  <button
+                    key={opt.url}
+                    type="button"
+                    onClick={() => applyLogo(opt.url, opt.style)}
+                    data-testid={`superadmin-logo-option-${i}`}
+                    className="flex items-center justify-center rounded-xl border bg-white p-6 transition-colors hover:border-brand hover:ring-1 hover:ring-brand"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={opt.url} alt={`Logo option ${i + 1}`} className="max-h-20 max-w-full object-contain" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Brand asset library */}
+          {Array.isArray(tenant.settings?.brand_assets) && tenant.settings.brand_assets.length > 0 && (
+            <div className="space-y-2" data-testid="superadmin-brand-assets">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold">Saved brand assets</p>
+                <Badge variant="outline" className="ml-auto">{tenant.settings.brand_assets.length}</Badge>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {(tenant.settings.brand_assets as BrandAsset[]).map((asset) => (
+                  <div key={asset.id} className={`relative rounded-lg border bg-white p-3 ${tenant.logo_url === asset.url ? "border-brand ring-1 ring-brand" : ""}`}>
+                    <button type="button" onClick={() => applyLogo(asset.url, asset.style)} title="Use this logo" data-testid={`superadmin-brand-asset-${asset.id}`} className="block">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={asset.url} alt="Saved logo" className="h-14 w-14 object-contain" />
+                    </button>
+                    <button type="button" onClick={() => deleteBrandAsset(asset.id)} title="Delete" data-testid={`superadmin-brand-asset-delete-${asset.id}`}
+                      className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full border bg-background text-muted-foreground hover:text-destructive">
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <input
+            ref={logoFileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadLogo(f) }}
+            data-testid="superadmin-logo-file-input"
+          />
         </CardContent>
       </Card>
 

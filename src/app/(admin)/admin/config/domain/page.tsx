@@ -11,6 +11,21 @@ interface DomainData {
   baseDomain: string
 }
 
+interface DomainChallenge {
+  type: string
+  domain: string
+  value: string
+}
+
+// Derive the DNS record Name from the custom domain.
+// Root domain (mybusiness.com) → "@"; subdomain (app.mybusiness.com) → "app".
+// Note: assumes a two-label registrable root (.com, .in); multi-part TLDs
+// like .co.uk would need a public-suffix list for full correctness.
+function dnsRecordName(host: string): string {
+  const labels = host.split(".")
+  return labels.length > 2 ? labels.slice(0, -2).join(".") : "@"
+}
+
 export default function DomainSettingsPage() {
   const [data, setData] = useState<DomainData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -21,6 +36,7 @@ export default function DomainSettingsPage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [copied, setCopied] = useState(false)
+  const [challenges, setChallenges] = useState<DomainChallenge[]>([])
 
   async function load() {
     setLoading(true)
@@ -60,8 +76,11 @@ export default function DomainSettingsPage() {
     })
     const d = await res.json()
     setVerifying(false)
+    setChallenges(d.challenges ?? [])
     if (d.verified) {
       setSuccess("Domain verified! Your site is now live on " + d.domain)
+    } else if (d.challenges?.length) {
+      setError("Almost there — add the ownership record(s) below, then verify again.")
     } else {
       setError("DNS not configured yet. Make sure you added the CNAME record and wait a few minutes for it to propagate.")
     }
@@ -173,8 +192,8 @@ export default function DomainSettingsPage() {
             <p className="text-xs text-muted-foreground">
               Add this CNAME record in your domain provider&apos;s DNS settings:
             </p>
-            <div className="rounded border border-border bg-background overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="rounded border border-border bg-background overflow-x-auto">
+              <table className="w-full min-w-[24rem] text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
                     <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">Type</th>
@@ -187,7 +206,7 @@ export default function DomainSettingsPage() {
                   <tr>
                     <td className="px-3 py-2 font-mono text-xs">CNAME</td>
                     <td className="px-3 py-2 font-mono text-xs">
-                      {data.custom_domain.startsWith("www.") ? "www" : "@"}
+                      {dnsRecordName(data.custom_domain)}
                     </td>
                     <td className="px-3 py-2 font-mono text-xs">{data.subdomain}</td>
                     <td className="px-2 py-2">
@@ -202,6 +221,47 @@ export default function DomainSettingsPage() {
                 </tbody>
               </table>
             </div>
+
+            {challenges.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-amber-600">
+                  Ownership verification required — add these record(s) too:
+                </p>
+                <div className="rounded border border-amber-500/40 bg-background overflow-x-auto">
+                  <table className="w-full min-w-[24rem] text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/50">
+                        <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">Type</th>
+                        <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">Name</th>
+                        <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">Value</th>
+                        <th className="w-8"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {challenges.map((c, i) => (
+                        <tr key={i} className="border-t border-border/50">
+                          <td className="px-3 py-2 font-mono text-xs">{c.type}</td>
+                          <td className="px-3 py-2 font-mono text-xs break-all">{c.domain}</td>
+                          <td className="px-3 py-2 font-mono text-xs break-all">{c.value}</td>
+                          <td className="px-2 py-2">
+                            <button
+                              onClick={() => copyToClipboard(c.value)}
+                              className="text-muted-foreground hover:text-foreground"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  This proves you own the domain. Some providers want only the sub-part of the
+                  Name (e.g. <code className="font-mono">_vercel</code>) — they append the rest automatically.
+                </p>
+              </div>
+            )}
 
             <div className="flex items-center gap-2">
               <button
