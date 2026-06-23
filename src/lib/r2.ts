@@ -39,7 +39,16 @@ function safeFilename(filename: string) {
 }
 
 function appFileUrl(key: string) {
-  return `/api/resources/files/${key.split("/").map(encodeURIComponent).join("/")}`
+  const encoded = key.split("/").map(encodeURIComponent).join("/")
+  // When a public R2/Cloudflare domain is configured, link straight to it so
+  // files are served from Cloudflare's edge (zero egress) instead of being
+  // proxied through the Vercel app. Falls back to the in-app proxy otherwise,
+  // which keeps older uploads (stored as /api/resources/files/...) working.
+  const publicBase = env("R2_PUBLIC_URL")
+  if (publicBase) {
+    return `${publicBase.replace(/\/+$/, "")}/${encoded}`
+  }
+  return `/api/resources/files/${encoded}`
 }
 
 export async function uploadToR2(file: File, folder: string) {

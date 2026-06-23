@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server"
-import { GoogleGenAI } from "@google/genai"
 import { getOwnerContext } from "@/lib/build-owner"
 
 export const runtime = "nodejs"
 export const maxDuration = 300
 
-const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
 const DEEPSEEK_MODELS = ["deepseek-v4-flash"]
 const DEEPSEEK_BASE = "https://api.deepseek.com"
 
@@ -57,16 +55,16 @@ No explanation, no markdown fences. Output ONLY the HTML document.`
 
 /**
  * POST /api/build/ai
- * Conversational AI website builder — tries Gemini first, falls back to DeepSeek.
+ * Conversational AI website builder — runs on DeepSeek (cheap). Gemini is
+ * reserved for logo generation only.
  */
 export async function POST(req: Request) {
   try {
     const owner = await getOwnerContext()
     if (!owner) return NextResponse.json({ error: "Not signed in" }, { status: 401 })
 
-    const geminiKey = process.env.GEMINI_API_KEY
     const deepseekKey = process.env.DEEPSEEK_API_KEY
-    if (!geminiKey && !deepseekKey) {
+    if (!deepseekKey) {
       return NextResponse.json({ error: "No AI keys configured." }, { status: 503 })
     }
 
@@ -110,20 +108,6 @@ export async function POST(req: Request) {
       userMessage = `Create a single-page website based on this description:\n\n${prompt}\n\nThe business/site name is "${owner.tenant.name}". Make it look premium, modern, and unique — NOT like a generic template.${extras.join("")}\nReturn ONLY the complete HTML document.`
     }
 
-    // -- Gemini provider -------------------------------------------------------
-    async function tryGemini(model: string): Promise<string> {
-      const ai = new GoogleGenAI({ apiKey: geminiKey! })
-      const response = await ai.models.generateContent({
-        model,
-        contents: userMessage,
-        config: { systemInstruction: SYSTEM, maxOutputTokens: 32768, temperature: 0.8 },
-      })
-      if (response.promptFeedback?.blockReason) {
-        throw Object.assign(new Error("AI declined"), { status: 422 })
-      }
-      return cleanHtml(response.text ?? "")
-    }
-
     // -- DeepSeek provider (OpenAI-compatible) ---------------------------------
     async function tryDeepSeek(model: string): Promise<string> {
       const res = await fetch(`${DEEPSEEK_BASE}/chat/completions`, {
@@ -155,15 +139,10 @@ export async function POST(req: Request) {
       return html
     }
 
-    // -- Build attempt list: DeepSeek first (more reliable), Gemini as fallback -
+    // -- Build attempt list: DeepSeek only -------------------------------------
     type Attempt = { provider: string; model: string; fn: (m: string) => Promise<string> }
     const attempts: Attempt[] = []
-    if (deepseekKey) {
-      for (const m of DEEPSEEK_MODELS) attempts.push({ provider: "DeepSeek", model: m, fn: tryDeepSeek })
-    }
-    if (geminiKey) {
-      for (const m of GEMINI_MODELS) attempts.push({ provider: "Gemini", model: m, fn: tryGemini })
-    }
+    for (const m of DEEPSEEK_MODELS) attempts.push({ provider: "DeepSeek", model: m, fn: tryDeepSeek })
 
     for (let i = 0; i < attempts.length; i++) {
       const { provider, model, fn } = attempts[i]

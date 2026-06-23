@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { unstable_cache } from "next/cache"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -13,25 +14,38 @@ const supabaseConfigured = () =>
   process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http") &&
   !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+// Cached per tenant slug. Published sites change rarely, so we serve from
+// Next.js' Data Cache instead of hitting Supabase on every visit. The cache
+// key includes the slug, so one tenant can never receive another's content.
+// Publishing a new page busts this via revalidateTag(`tenant-page-${slug}`).
+const fetchHomepageOverride = (slug: string) =>
+  unstable_cache(
+    async (): Promise<CustomPage | null> => {
+      const { createClient } = await import("@/lib/supabase/server")
+      const supabase = createClient()
+      const [tenantRes, pagesRes] = await Promise.all([
+        supabase.from("tenants").select("id").eq("slug", slug).eq("status", "active").maybeSingle(),
+        supabase.from("custom_pages").select("*").eq("is_homepage", true).eq("status", "published"),
+      ])
+      const tenantId = (tenantRes.data as { id: string } | null)?.id
+      const pages = pagesRes.data as CustomPage[] | null
+      if (!tenantId || !pages?.length) return null
+      return pages.find((p) => p.tenant_id === tenantId) ?? null
+    },
+    ["homepage-override", slug],
+    { tags: [`tenant-page-${slug}`], revalidate: 300 }
+  )()
+
 async function getHomepageOverride(): Promise<CustomPage | null> {
   if (!FEATURES.pageBuilder) return null
   if (!supabaseConfigured()) {
     return MOCK_CUSTOM_PAGES.find((p) => p.is_homepage && p.status === "published") ?? null
   }
   try {
-    const { createClient } = await import("@/lib/supabase/server")
     const { getTenantSlug } = await import("@/lib/tenant")
     const slug = await getTenantSlug()
     if (slug === "0tox" || !slug) return null
-    const supabase = createClient()
-    const [tenantRes, pagesRes] = await Promise.all([
-      supabase.from("tenants").select("id").eq("slug", slug).eq("status", "active").maybeSingle(),
-      supabase.from("custom_pages").select("*").eq("is_homepage", true).eq("status", "published"),
-    ])
-    const tenantId = (tenantRes.data as { id: string } | null)?.id
-    const pages = pagesRes.data as CustomPage[] | null
-    if (!tenantId || !pages?.length) return null
-    return pages.find((p) => p.tenant_id === tenantId) ?? null
+    return await fetchHomepageOverride(slug)
   } catch {
     return null
   }
@@ -97,17 +111,21 @@ const PRICING = [
   },
 ]
 
-async function getPortfolio() {
-  try {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http")) return MOCK_PORTFOLIO
-    const { createClient } = await import("@/lib/supabase/server")
-    const supabase = await createClient()
-    const { data } = await supabase.from("portfolio_items").select("*").eq("visible", true).order("sort_order").limit(6)
-    return data?.length ? data : MOCK_PORTFOLIO
-  } catch {
-    return MOCK_PORTFOLIO
-  }
-}
+const getPortfolio = unstable_cache(
+  async () => {
+    try {
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http")) return MOCK_PORTFOLIO
+      const { createClient } = await import("@/lib/supabase/server")
+      const supabase = createClient()
+      const { data } = await supabase.from("portfolio_items").select("*").eq("visible", true).order("sort_order").limit(6)
+      return data?.length ? data : MOCK_PORTFOLIO
+    } catch {
+      return MOCK_PORTFOLIO
+    }
+  },
+  ["landing-portfolio"],
+  { tags: ["portfolio"], revalidate: 300 }
+)
 
 const NAV_LINKS = [
   { href: "#services", label: "Features" },
