@@ -64,14 +64,30 @@ export async function POST(request: Request) {
   }
 
   const templateKey = typeof body.template === "string" ? body.template : "blank"
-  const template = getTemplate(templateKey)
+  const customHtml = typeof body.html === "string" ? body.html : ""
+  const customCss = typeof body.css === "string" ? body.css : ""
+
+  let html: string
+  let css: string
+  let tplName: string
+
+  if (customHtml) {
+    html = customHtml
+    css = customCss
+    tplName = templateKey
+  } else {
+    const template = getTemplate(templateKey)
+    html = template.html
+    css = template.css
+    tplName = template.key
+  }
 
   const record = {
     title,
     slug,
-    html: template.html,
-    css: template.css,
-    template: template.key,
+    html,
+    css,
+    template: tplName,
     status: "draft" as const,
     is_homepage: false,
   }

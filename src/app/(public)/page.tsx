@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { unstable_cache } from "next/cache"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -13,29 +14,38 @@ const supabaseConfigured = () =>
   process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http") &&
   !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+// Cached per tenant slug. Published sites change rarely, so we serve from
+// Next.js' Data Cache instead of hitting Supabase on every visit. The cache
+// key includes the slug, so one tenant can never receive another's content.
+// Publishing a new page busts this via revalidateTag(`tenant-page-${slug}`).
+const fetchHomepageOverride = (slug: string) =>
+  unstable_cache(
+    async (): Promise<CustomPage | null> => {
+      const { createClient } = await import("@/lib/supabase/server")
+      const supabase = createClient()
+      const [tenantRes, pagesRes] = await Promise.all([
+        supabase.from("tenants").select("id").eq("slug", slug).eq("status", "active").maybeSingle(),
+        supabase.from("custom_pages").select("*").eq("is_homepage", true).eq("status", "published"),
+      ])
+      const tenantId = (tenantRes.data as { id: string } | null)?.id
+      const pages = pagesRes.data as CustomPage[] | null
+      if (!tenantId || !pages?.length) return null
+      return pages.find((p) => p.tenant_id === tenantId) ?? null
+    },
+    ["homepage-override", slug],
+    { tags: [`tenant-page-${slug}`], revalidate: 300 }
+  )()
+
 async function getHomepageOverride(): Promise<CustomPage | null> {
   if (!FEATURES.pageBuilder) return null
   if (!supabaseConfigured()) {
     return MOCK_CUSTOM_PAGES.find((p) => p.is_homepage && p.status === "published") ?? null
   }
   try {
-    const { createClient } = await import("@/lib/supabase/server")
-    const { getCurrentTenant, getTenantSlug } = await import("@/lib/tenant")
+    const { getTenantSlug } = await import("@/lib/tenant")
     const slug = await getTenantSlug()
-    // Don't override the main marketing page — only show tenant homepages
-    // on real subdomains (not the localhost fallback "0tox" tenant)
     if (slug === "0tox" || !slug) return null
-    const supabase = await createClient()
-    const tenant = await getCurrentTenant().catch(() => null)
-    if (!tenant?.id) return null
-    const { data } = await supabase
-      .from("custom_pages")
-      .select("*")
-      .eq("is_homepage", true)
-      .eq("status", "published")
-      .eq("tenant_id", tenant.id)
-      .maybeSingle()
-    return (data as CustomPage | null) ?? null
+    return await fetchHomepageOverride(slug)
   } catch {
     return null
   }
@@ -101,28 +111,32 @@ const PRICING = [
   },
 ]
 
-async function getPortfolio() {
-  try {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http")) return MOCK_PORTFOLIO
-    const { createClient } = await import("@/lib/supabase/server")
-    const supabase = await createClient()
-    const { data } = await supabase.from("portfolio_items").select("*").eq("visible", true).order("sort_order").limit(6)
-    return data?.length ? data : MOCK_PORTFOLIO
-  } catch {
-    return MOCK_PORTFOLIO
-  }
-}
+const getPortfolio = unstable_cache(
+  async () => {
+    try {
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http")) return MOCK_PORTFOLIO
+      const { createClient } = await import("@/lib/supabase/server")
+      const supabase = createClient()
+      const { data } = await supabase.from("portfolio_items").select("*").eq("visible", true).order("sort_order").limit(6)
+      return data?.length ? data : MOCK_PORTFOLIO
+    } catch {
+      return MOCK_PORTFOLIO
+    }
+  },
+  ["landing-portfolio"],
+  { tags: ["portfolio"], revalidate: 300 }
+)
 
 const NAV_LINKS = [
   { href: "#services", label: "Features" },
   { href: "#pricing", label: "Pricing" },
+  { href: "/templates", label: "Templates" },
   { href: "#portfolio", label: "Examples" },
   { href: "#about", label: "About" },
   { href: "#contact", label: "Contact" },
 ]
 
 export default async function LandingPage() {
-  // If an admin has published a custom homepage, render it instead of the default landing page.
   const homepageOverride = await getHomepageOverride()
   if (homepageOverride) {
     return (
@@ -140,10 +154,9 @@ export default async function LandingPage() {
       {/* Nav */}
       <header className="border-b border-border sticky top-0 z-50 bg-background/80 backdrop-blur">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5" data-testid="home-logo">
+          <Link href="/" className="flex items-center" data-testid="home-logo">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-mark-dark.svg" alt="" aria-hidden="true" className="h-9 w-auto" />
-            <span className="text-xl font-bold tracking-tight">Site<span className="text-[#2B6BFF]">9</span></span>
+            <img src="/site9-logo.png" alt="Site9 — One Website for Every Business" className="h-10 w-auto" />
           </Link>
           <nav className="hidden md:flex items-center gap-6">
             {NAV_LINKS.map(link => (
@@ -387,7 +400,8 @@ export default async function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-border py-10">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <span className="text-lg font-bold">Site9</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/site9-logo.png" alt="Site9 — One Website for Every Business" className="h-9 w-auto" />
           <p className="text-sm text-muted-foreground">One Website for Every Business.</p>
           <div className="flex items-center gap-4">
             <a

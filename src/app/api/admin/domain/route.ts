@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { getSession } from "@/lib/session"
+import {
+  isVercelConfigured,
+  addDomainToProject,
+  removeDomainFromProject,
+  getDomainStatus,
+  verifyProjectDomain,
+  type DomainChallenge,
+} from "@/lib/vercel"
 
 export async function GET() {
   const session = await getSession()
@@ -70,6 +78,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "This domain is already connected to another site" }, { status: 409 })
     }
 
+    // Register the domain on the Vercel project so the edge routes the host to
+    // our deployment. Without this, DNS resolves but Vercel returns 404.
+    if (isVercelConfigured()) {
+      const result = await addDomainToProject(domain)
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: 409 })
+      }
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any)
       .from("tenants")
@@ -95,8 +112,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No domain configured" }, { status: 400 })
     }
 
-    // Verify DNS by checking if the domain resolves (CNAME to site9.in)
-    const verified = await checkDns(tenant.custom_domain)
+    let verified: boolean
+    let challenges: DomainChallenge[] = []
+    if (isVercelConfigured()) {
+      // Ensure the domain is attached (covers domains saved before Vercel
+      // integration existed), nudge Vercel to re-check ownership, then read
+      // the full status. Live requires BOTH ownership + DNS — a domain whose
+      // apex is on another Vercel account needs a TXT challenge first.
+      await addDomainToProject(tenant.custom_domain)
+      await verifyProjectDomain(tenant.custom_domain)
+      const status = await getDomainStatus(tenant.custom_domain)
+      verified = status.verified
+      challenges = status.challenges
+    } else {
+      // Local/dev fallback: just check that DNS resolves to our base domain.
+      verified = await checkDns(tenant.custom_domain)
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any)
@@ -104,10 +135,17 @@ export async function POST(req: Request) {
       .update({ domain_verified: verified })
       .eq("id", session.tenant_id)
 
-    return NextResponse.json({ verified, domain: tenant.custom_domain })
+    return NextResponse.json({ verified, domain: tenant.custom_domain, challenges })
   }
 
   if (action === "remove") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: tenant } = await (supabase as any)
+      .from("tenants")
+      .select("custom_domain")
+      .eq("id", session.tenant_id)
+      .maybeSingle()
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any)
       .from("tenants")
@@ -116,6 +154,11 @@ export async function POST(req: Request) {
 
     if (error) {
       return NextResponse.json({ error: "Failed to remove domain" }, { status: 500 })
+    }
+
+    // Free the host on Vercel so it can be reused elsewhere.
+    if (tenant?.custom_domain && isVercelConfigured()) {
+      await removeDomainFromProject(tenant.custom_domain)
     }
 
     return NextResponse.json({ ok: true })

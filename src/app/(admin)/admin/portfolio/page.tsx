@@ -108,7 +108,7 @@ export default function AdminPortfolioPage() {
         <Card>
           <CardContent className="p-5 space-y-4">
             <h3 className="font-semibold">New portfolio item</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5"><Label>Title *</Label><Input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} /></div>
               <div className="space-y-1.5"><Label>Image URL *</Label><Input value={form.image_url} onChange={e => setForm(p => ({ ...p, image_url: e.target.value }))} placeholder="https://..." /></div>
               <div className="space-y-1.5"><Label>Live URL</Label><Input value={form.live_url} onChange={e => setForm(p => ({ ...p, live_url: e.target.value }))} placeholder="https://..." /></div>
@@ -143,7 +143,7 @@ export default function AdminPortfolioPage() {
       )}
 
       {loading ? (
-        <div className="grid grid-cols-3 gap-4">{[...Array(3)].map((_, i) => <div key={i} className="aspect-video bg-muted rounded-xl animate-pulse" />)}</div>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">{[...Array(3)].map((_, i) => <div key={i} className="aspect-video bg-muted rounded-xl animate-pulse" />)}</div>
       ) : !items.length ? (
         <Card className="border-dashed"><CardContent className="py-12 text-center text-muted-foreground text-sm">No portfolio items yet — add your first one above</CardContent></Card>
       ) : (

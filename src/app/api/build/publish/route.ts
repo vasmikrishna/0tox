@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { revalidateTag } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { getOwnerContext } from "@/lib/build-owner"
 import { renderBusinessTemplate, getBusinessTemplate } from "@/lib/business-templates"
@@ -99,6 +100,9 @@ export async function POST(req: Request) {
     .eq("id", owner.tenant.id)
 
   if (tErr) return NextResponse.json({ error: "Published, but could not unlock your portal" }, { status: 500 })
+
+  // Bust the cached homepage so the new content shows immediately.
+  revalidateTag(`tenant-page-${owner.tenant.slug}`, { expire: 0 })
 
   return NextResponse.json({ ok: true, host: subdomainHost(owner.tenant.slug) })
 }

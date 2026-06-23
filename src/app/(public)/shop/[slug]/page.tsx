@@ -39,8 +39,17 @@ async function getProduct(slug: string): Promise<Product | null> {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const product = await getProduct(slug)
-  if (!product) return { title: "Product not found | Site9" }
-  return { title: `${product.name} | Site9` }
+  if (!product) return { title: "Product not found" }
+  return {
+    title: product.name,
+    description: product.description ?? `${product.name} — available now.`,
+    alternates: { canonical: `/shop/${slug}` },
+    openGraph: {
+      title: product.name,
+      description: product.description ?? `${product.name} — available now.`,
+      ...(product.image_url ? { images: [{ url: product.image_url, alt: product.name }] } : {}),
+    },
+  }
 }
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server"
-import { GoogleGenAI } from "@google/genai"
 import { getOwnerContext } from "@/lib/build-owner"
 
 export const runtime = "nodejs"
@@ -11,9 +10,8 @@ export async function POST(req: Request) {
   const owner = await getOwnerContext()
   if (!owner) return NextResponse.json({ error: "Not signed in" }, { status: 401 })
 
-  const geminiKey = process.env.GEMINI_API_KEY
   const deepseekKey = process.env.DEEPSEEK_API_KEY
-  if (!geminiKey && !deepseekKey) {
+  if (!deepseekKey) {
     return NextResponse.json({ error: "No AI configured." }, { status: 503 })
   }
 
@@ -36,34 +34,19 @@ export async function POST(req: Request) {
   type Attempt = { label: string; fn: () => Promise<string> }
   const attempts: Attempt[] = []
 
-  if (deepseekKey) {
-    attempts.push({
-      label: "DeepSeek/v4-flash",
-      fn: async () => {
-        const r = await fetch(`${DEEPSEEK_BASE}/chat/completions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${deepseekKey}` },
-          body: JSON.stringify({ model: "deepseek-v4-flash", messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], max_tokens: 2048, temperature: 0.7 }),
-        })
-        if (!r.ok) throw Object.assign(new Error(`HTTP ${r.status}`), { status: r.status })
-        const d = await r.json()
-        return clean(d.choices?.[0]?.message?.content ?? "")
-      },
-    })
-  }
-
-  if (geminiKey) {
-    const ai = new GoogleGenAI({ apiKey: geminiKey })
-    for (const m of ["gemini-2.5-flash", "gemini-2.0-flash"]) {
-      attempts.push({
-        label: `Gemini/${m}`,
-        fn: async () => {
-          const r = await ai.models.generateContent({ model: m, contents: userPrompt, config: { systemInstruction: systemPrompt, maxOutputTokens: 2048, temperature: 0.7 } })
-          return clean(r.text ?? "")
-        },
+  attempts.push({
+    label: "DeepSeek/v4-flash",
+    fn: async () => {
+      const r = await fetch(`${DEEPSEEK_BASE}/chat/completions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${deepseekKey}` },
+        body: JSON.stringify({ model: "deepseek-v4-flash", messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], max_tokens: 2048, temperature: 0.7 }),
       })
-    }
-  }
+      if (!r.ok) throw Object.assign(new Error(`HTTP ${r.status}`), { status: r.status })
+      const d = await r.json()
+      return clean(d.choices?.[0]?.message?.content ?? "")
+    },
+  })
 
   for (let i = 0; i < attempts.length; i++) {
     try {

@@ -53,7 +53,7 @@ export default async function AdminPaymentsPage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6 pb-5">
             <p className="text-2xl font-bold text-green-500">{formatCurrency(totalCollected)}</p>

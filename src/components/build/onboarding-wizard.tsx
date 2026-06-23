@@ -9,13 +9,18 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
   ArrowLeft, ArrowRight, Check, Upload, Wand2, Sparkles,
-  Globe, Palette, ImageIcon, Building2, Eye,
+  Globe, Palette, ImageIcon, Building2, Eye, Trash2,
 } from "lucide-react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { CATEGORIES } from "@/lib/curated-templates"
 import { extractColorsFromImage } from "@/lib/color-extract"
+import { LOGO_STYLES } from "@/lib/logo-styles"
 import type { BusinessDetails } from "@/lib/onboarding"
+import type { BrandAsset } from "@/lib/build-assets"
 import type { ReferenceSite, ColorPalette, ColorPaletteColors } from "@/types"
+
+/** A freshly generated, not-yet-chosen logo option. */
+interface LogoOption { url: string; svg: string; style?: string }
 
 type WizardStep = 1 | 2 | 3 | 4 | 5
 
@@ -49,11 +54,15 @@ export function OnboardingWizard({ initialDetails, onComplete }: OnboardingWizar
   const [selectedRef, setSelectedRef] = useState<string | null>(initialDetails.reference_site_id ?? null)
   const [previewSite, setPreviewSite] = useState<ReferenceSite | null>(null)
   const [loadingRefs, setLoadingRefs] = useState(false)
+  const [industryFilter, setIndustryFilter] = useState<string>("all")
 
   // Step 2: Logo
   const [logoUrl, setLogoUrl] = useState(initialDetails.logo_url ?? "")
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [generatingLogo, setGeneratingLogo] = useState(false)
+  const [logoStyle, setLogoStyle] = useState<string>(LOGO_STYLES[0]?.id ?? "")
+  const [logoOptions, setLogoOptions] = useState<LogoOption[]>([])
+  const [brandAssets, setBrandAssets] = useState<BrandAsset[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Step 3: Colors
@@ -101,8 +110,17 @@ export function OnboardingWizard({ initialDetails, onComplete }: OnboardingWizar
     finally { setLoadingPalettes(false) }
   }, [palettes.length, category])
 
+  const fetchBrandAssets = useCallback(async () => {
+    try {
+      const res = await fetch("/api/build/assets")
+      const data = await res.json()
+      setBrandAssets(data.assets ?? [])
+    } catch { /* ignore */ }
+  }, [])
+
   // ── Initial load ──────────────────────────────────────────────────────────
   useEffect(() => { fetchReferenceSites() }, [fetchReferenceSites])
+  useEffect(() => { fetchBrandAssets() }, [fetchBrandAssets])
 
   // ── Step navigation ──────────────────────────────────────────────────────
 
@@ -149,6 +167,20 @@ export function OnboardingWizard({ initialDetails, onComplete }: OnboardingWizar
 
   // ── Logo upload ──────────────────────────────────────────────────────────
 
+  // Persist a chosen/uploaded logo into the owner's brand asset library so it
+  // can be reused later. Best-effort — failure shouldn't block the wizard.
+  async function saveToBrandAssets(url: string, style?: string) {
+    try {
+      const res = await fetch("/api/build/assets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, style }),
+      })
+      const data = await res.json()
+      if (res.ok && data.assets) setBrandAssets(data.assets)
+    } catch { /* non-critical */ }
+  }
+
   async function handleLogoUpload(file: File) {
     setUploadingLogo(true)
     setError("")
@@ -159,13 +191,17 @@ export function OnboardingWizard({ initialDetails, onComplete }: OnboardingWizar
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? "Upload failed"); return }
       setLogoUrl(data.url)
+      setLogoOptions([])
+      await saveToBrandAssets(data.url)
     } catch { setError("Upload failed") }
     finally { setUploadingLogo(false) }
   }
 
+  // Generate a few options in the selected style; the owner picks one.
   async function handleGenerateLogo() {
     setGeneratingLogo(true)
     setError("")
+    setLogoOptions([])
     try {
       const res = await fetch("/api/build/generate-logo", {
         method: "POST",
@@ -174,13 +210,39 @@ export function OnboardingWizard({ initialDetails, onComplete }: OnboardingWizar
           businessName: name || initialDetails.name,
           category,
           colors: { primary: customColors.primary, accent: customColors.accent },
+          style: logoStyle,
+          count: 2,
         }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? "Logo generation failed"); return }
-      setLogoUrl(data.url)
+      setLogoOptions(data.options ?? [])
     } catch { setError("Could not generate logo") }
     finally { setGeneratingLogo(false) }
+  }
+
+  // Owner picks one of the generated options.
+  async function pickLogoOption(opt: LogoOption) {
+    setLogoUrl(opt.url)
+    setLogoOptions([])
+    await saveToBrandAssets(opt.url, opt.style)
+  }
+
+  // Reuse a previously saved brand asset.
+  function reuseBrandAsset(asset: BrandAsset) {
+    setLogoUrl(asset.url)
+    setLogoOptions([])
+  }
+
+  async function deleteBrandAsset(id: string) {
+    setBrandAssets(prev => prev.filter(a => a.id !== id))
+    try {
+      await fetch("/api/build/assets", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      })
+    } catch { fetchBrandAssets() }
   }
 
   // ── Final generation ─────────────────────────────────────────────────────
@@ -220,6 +282,23 @@ export function OnboardingWizard({ initialDetails, onComplete }: OnboardingWizar
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
+
+  // Industry filter options for Step 1 (built from whatever the API returned).
+  const industryOptions = (() => {
+    const counts = new Map<string, number>()
+    for (const s of referenceSites) {
+      const key = (s.industry || "general").toLowerCase()
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([value, count]) => ({ value, count }))
+  })()
+
+  const visibleSites =
+    industryFilter === "all"
+      ? referenceSites
+      : referenceSites.filter((s) => (s.industry || "general").toLowerCase() === industryFilter)
 
   return (
     <div className="flex h-screen flex-col bg-background">
@@ -265,7 +344,7 @@ export function OnboardingWizard({ initialDetails, onComplete }: OnboardingWizar
               <div className="text-center">
                 <h1 className="text-2xl font-bold tracking-tight">Choose a style you like</h1>
                 <p className="mt-1 text-muted-foreground">
-                  Browse our curated websites for inspiration. We&apos;ll match your site&apos;s look and feel.
+                  Browse our full library of website templates. Pick any one you like — we&apos;ll match its look and feel.
                 </p>
               </div>
               {loadingRefs ? (
@@ -275,12 +354,45 @@ export function OnboardingWizard({ initialDetails, onComplete }: OnboardingWizar
               ) : referenceSites.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <Globe className="h-10 w-10 mx-auto mb-3" />
-                  <p>No reference sites available yet.</p>
+                  <p>No templates available yet.</p>
                   <p className="text-sm mt-1">You can skip this step and let AI choose a style.</p>
                 </div>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {referenceSites.map((site) => (
+                <>
+                  {/* Industry filter — keeps the full template library browsable */}
+                  {industryOptions.length > 1 && (
+                    <div className="flex flex-wrap justify-center gap-2" data-testid="ref-industry-filter">
+                      <button
+                        type="button"
+                        onClick={() => setIndustryFilter("all")}
+                        className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${
+                          industryFilter === "all"
+                            ? "border-brand bg-brand text-background"
+                            : "border-border text-muted-foreground hover:border-brand/60 hover:text-foreground"
+                        }`}
+                        data-testid="ref-industry-all"
+                      >
+                        All ({referenceSites.length})
+                      </button>
+                      {industryOptions.map(({ value, count }) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setIndustryFilter(value)}
+                          className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${
+                            industryFilter === value
+                              ? "border-brand bg-brand text-background"
+                              : "border-border text-muted-foreground hover:border-brand/60 hover:text-foreground"
+                          }`}
+                          data-testid={`ref-industry-${value}`}
+                        >
+                          {value} ({count})
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                  {visibleSites.map((site) => (
                     <button
                       key={site.id}
                       type="button"
@@ -293,7 +405,19 @@ export function OnboardingWizard({ initialDetails, onComplete }: OnboardingWizar
                       data-testid={`ref-site-${site.id}`}
                     >
                       <div className="relative aspect-video bg-white overflow-hidden">
-                        {site.html ? (
+                        {/* Gallery templates ship a screenshot — render it as a lightweight image so
+                            the library can show 100+ items without mounting that many live iframes.
+                            Curated reference sites keep their live (scaled) preview. */}
+                        {site.source === "gallery" && site.thumbnail_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={site.thumbnail_url}
+                            alt={site.name}
+                            loading="lazy"
+                            className="h-full w-full object-cover object-top"
+                            data-testid={`ref-preview-${site.id}`}
+                          />
+                        ) : site.html ? (
                           <div className="absolute inset-0">
                             <iframe
                               title={site.name}
@@ -306,7 +430,7 @@ export function OnboardingWizard({ initialDetails, onComplete }: OnboardingWizar
                           </div>
                         ) : site.thumbnail_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={site.thumbnail_url} alt={site.name} className="h-full w-full object-cover" />
+                          <img src={site.thumbnail_url} alt={site.name} loading="lazy" className="h-full w-full object-cover" />
                         ) : (
                           <div className="h-full w-full flex items-center justify-center">
                             <Globe className="h-8 w-8 text-muted-foreground" />
@@ -334,7 +458,13 @@ export function OnboardingWizard({ initialDetails, onComplete }: OnboardingWizar
                       </div>
                     </button>
                   ))}
-                </div>
+                  </div>
+                  {visibleSites.length === 0 && (
+                    <p className="text-center py-8 text-sm text-muted-foreground">
+                      No templates in this category. Try another filter.
+                    </p>
+                  )}
+                </>
               )}
 
               {/* Preview dialog */}
@@ -363,46 +493,129 @@ export function OnboardingWizard({ initialDetails, onComplete }: OnboardingWizar
               <div className="text-center">
                 <h1 className="text-2xl font-bold tracking-tight">Your Logo</h1>
                 <p className="mt-1 text-muted-foreground">
-                  Upload your logo or let AI create one for you.
+                  Pick a style and let AI design a few options — or upload your own.
                 </p>
               </div>
 
               {logoUrl && (
                 <div className="flex justify-center">
-                  <div className="rounded-xl border bg-white p-6">
+                  <div className="relative rounded-xl border bg-white p-6">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={logoUrl} alt="Your logo" className="max-h-24 max-w-[200px] object-contain" />
+                    <img src={logoUrl} alt="Your logo" className="max-h-24 max-w-[200px] object-contain" data-testid="selected-logo" />
+                    <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-brand text-white">
+                      <Check className="h-4 w-4" />
+                    </span>
                   </div>
                 </div>
               )}
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Card className="cursor-pointer hover:border-brand/60 transition-colors" onClick={() => fileRef.current?.click()}>
-                  <CardContent className="flex flex-col items-center gap-3 py-8">
-                    <Upload className="h-8 w-8 text-muted-foreground" />
-                    <div className="text-center">
-                      <p className="font-semibold text-sm">I have a logo</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Upload an image file</p>
-                    </div>
-                    {uploadingLogo && <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />}
-                  </CardContent>
-                </Card>
+              {/* Style picker ------------------------------------------------ */}
+              <div>
+                <Label className="text-sm font-semibold">Logo style</Label>
+                <div className="mt-2 flex flex-wrap gap-2" data-testid="logo-style-picker">
+                  {LOGO_STYLES.map((s) => {
+                    const active = logoStyle === s.id
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setLogoStyle(s.id)}
+                        data-testid={`logo-style-${s.id}`}
+                        aria-pressed={active}
+                        className={`rounded-lg border px-3 py-2 text-left transition-colors ${active ? "border-brand bg-brand/5 ring-1 ring-brand" : "hover:border-brand/60"}`}
+                      >
+                        <p className="text-sm font-medium leading-tight">{s.label}</p>
+                        <p className="text-[11px] text-muted-foreground leading-tight">{s.description}</p>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
 
-                <Card
-                  className="cursor-pointer hover:border-brand/60 transition-colors"
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Button
                   onClick={handleGenerateLogo}
+                  disabled={generatingLogo}
+                  className="h-11"
                   data-testid="generate-logo-btn"
                 >
-                  <CardContent className="flex flex-col items-center gap-3 py-8">
-                    <Wand2 className="h-8 w-8 text-muted-foreground" />
-                    <div className="text-center">
-                      <p className="font-semibold text-sm">Create one for me</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">AI-generated logo</p>
-                    </div>
-                    {generatingLogo && <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />}
-                  </CardContent>
-                </Card>
+                  {generatingLogo
+                    ? <><div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> Designing…</>
+                    : <><Wand2 className="mr-2 h-4 w-4" /> {logoOptions.length || logoUrl ? "Generate new options" : "Generate 2 options"}</>}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={uploadingLogo}
+                  className="h-11"
+                  data-testid="upload-logo-btn"
+                >
+                  {uploadingLogo
+                    ? <><div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-brand/30 border-t-brand" /> Uploading…</>
+                    : <><Upload className="mr-2 h-4 w-4" /> Upload my logo</>}
+                </Button>
               </div>
+
+              {/* Generated options to pick from ------------------------------ */}
+              {logoOptions.length > 0 && (
+                <div className="space-y-2" data-testid="logo-options">
+                  <p className="text-sm font-semibold">Pick the one you like</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {logoOptions.map((opt, i) => (
+                      <button
+                        key={opt.url}
+                        type="button"
+                        onClick={() => pickLogoOption(opt)}
+                        data-testid={`logo-option-${i}`}
+                        className="group flex items-center justify-center rounded-xl border bg-white p-6 transition-colors hover:border-brand hover:ring-1 hover:ring-brand"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={opt.url} alt={`Logo option ${i + 1}`} className="max-h-20 max-w-full object-contain" />
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Picking one saves it to your brand assets below.</p>
+                </div>
+              )}
+
+              {/* Brand asset library — the owner's saved logos --------------- */}
+              {brandAssets.length > 0 && (
+                <div className="space-y-2" data-testid="brand-assets">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-sm font-semibold">Your brand assets</p>
+                    <Badge variant="outline" className="ml-auto">{brandAssets.length}</Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    {brandAssets.map((asset) => (
+                      <div
+                        key={asset.id}
+                        className={`relative rounded-lg border bg-white p-3 ${logoUrl === asset.url ? "border-brand ring-1 ring-brand" : ""}`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => reuseBrandAsset(asset)}
+                          title="Use this logo"
+                          data-testid={`brand-asset-${asset.id}`}
+                          className="block"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={asset.url} alt="Saved logo" className="h-14 w-14 object-contain" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteBrandAsset(asset.id)}
+                          title="Delete"
+                          data-testid={`brand-asset-delete-${asset.id}`}
+                          className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full border bg-background text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <input
                 ref={fileRef}

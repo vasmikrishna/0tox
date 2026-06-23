@@ -134,6 +134,9 @@ export async function middleware(req: NextRequest) {
   if (!FEATURES.bookings && (path.startsWith("/admin/bookings") || path.startsWith("/book"))) {
     return NextResponse.redirect(new URL(path.startsWith("/admin") ? "/admin/dashboard" : "/", req.url))
   }
+  if (!FEATURES.blog && (path.startsWith("/admin/blog") || path.startsWith("/blog"))) {
+    return NextResponse.redirect(new URL(path.startsWith("/admin") ? "/admin/dashboard" : "/", req.url))
+  }
 
   // Superadmin: only the platform admin email can access
   if (path.startsWith("/superadmin")) {
@@ -154,7 +157,17 @@ export async function middleware(req: NextRequest) {
   if (session && isProtected && session.tenant_id && session.id !== "admin") {
     const currentTenantId = await getTenantIdForSlug(tenantSlug)
     if (currentTenantId && session.tenant_id !== currentTenantId) {
-      return NextResponse.redirect(new URL("/login", req.url))
+      // Clear the stale session cookie so /login doesn't redirect back here (infinite loop)
+      const redirect = NextResponse.redirect(new URL("/login", req.url))
+      const cookieDomain =
+        process.env.NODE_ENV === "production" ? `.${BASE_DOMAIN}` : undefined
+      redirect.cookies.set("session", "", {
+        httpOnly: true,
+        maxAge: 0,
+        path: "/",
+        ...(cookieDomain ? { domain: cookieDomain } : {}),
+      })
+      return redirect
     }
   }
 
@@ -197,5 +210,15 @@ export const config = {
     "/s/:path*",
     "/shop/:path*",
     "/p/:path*",
+    // SEO: sitemap and robots need x-tenant-slug to resolve per-tenant output
+    "/sitemap.xml",
+    "/robots.txt",
+    // Public pages that need tenant context for metadata
+    "/about",
+    "/services",
+    "/work/:path*",
+    "/contact",
+    "/book",
+    "/templates/:path*",
   ],
 }

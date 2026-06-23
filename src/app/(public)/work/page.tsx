@@ -1,8 +1,14 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { PORTFOLIO_SEED } from "@/lib/portfolio-seed"
 
-export const metadata = { title: "Examples | Site9" }
+export const metadata: Metadata = {
+  title: "Examples",
+  description: "Real businesses already online with Site9. See case studies of cafes, salons, photographers and more.",
+  alternates: { canonical: "/work" },
+  openGraph: { title: "Examples | Site9", description: "Real businesses already online with Site9." },
+}
 
 export default function WorkPage() {
   const projects = PORTFOLIO_SEED

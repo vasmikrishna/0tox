@@ -35,7 +35,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params
   const page = await getPublishedPage(slug)
   if (!page) return { title: "Page not found" }
-  return { title: page.title }
+  return {
+    title: page.title,
+    alternates: { canonical: `/p/${slug}` },
+    openGraph: { title: page.title },
+  }
 }
 
 export default async function CustomPublicPage({ params }: { params: Promise<{ slug: string }> }) {

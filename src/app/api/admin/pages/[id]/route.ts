@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { revalidateTag } from "next/cache"
 import { getSession } from "@/lib/session"
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentTenant } from "@/lib/tenant"
@@ -75,6 +76,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const { data, error } = await query.select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Bust the cached public homepage for this tenant so edits show immediately.
+  if (tenant?.slug) revalidateTag(`tenant-page-${tenant.slug}`, { expire: 0 })
 
   return NextResponse.json({ page: data })
 }

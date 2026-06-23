@@ -7,10 +7,12 @@ import { Textarea } from "@/components/ui/textarea"
 import {
   ArrowRight, Send, Wand2, Upload, ImageIcon, MousePointerClick,
   ExternalLink, Sparkles, Link2, Trash2, Monitor, Tablet, Smartphone,
-  LayoutGrid, ChevronUp, ChevronDown,
+  LayoutGrid, LayoutTemplate, ChevronUp, ChevronDown, Search,
 } from "lucide-react"
 import { EDITOR_OVERLAY_CSS, EDITOR_SCRIPT } from "@/lib/editor-inject"
 import { SectionLibrary } from "@/components/build/section-library"
+import { TemplateBrowser } from "@/components/build/template-browser"
+import { UpgradeBanner } from "@/components/build/upgrade-banner"
 import { scopeSectionCss, wrapSectionHtml, getScopeClass } from "@/lib/section-css"
 import type { BusinessDetails } from "@/lib/onboarding"
 import type { SectionTemplate } from "@/types"
@@ -32,11 +34,13 @@ export function Builder({
   ownerName,
   host,
   initialHtml,
+  subscribed = false,
 }: {
   initialDetails: BusinessDetails
   ownerName: string
   host: string
   initialHtml?: string
+  subscribed?: boolean
 }) {
   const [prompt, setPrompt] = useState("")
   const [rawHtml, setRawHtml] = useState(initialHtml ?? "")
@@ -47,6 +51,7 @@ export function Builder({
   const [selectedEl, setSelectedEl] = useState<SelectedElement | null>(null)
   const [viewport, setViewport] = useState<Viewport>("desktop")
   const [showSectionLib, setShowSectionLib] = useState(false)
+  const [showTemplateBrowser, setShowTemplateBrowser] = useState(false)
 
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const htmlResolveRef = useRef<((h: string) => void) | null>(null)
@@ -195,9 +200,17 @@ export function Builder({
         )}
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => { setShowTemplateBrowser(!showTemplateBrowser); if (!showTemplateBrowser) setShowSectionLib(false) }}
+            className={`rounded-md p-1.5 transition-colors ${showTemplateBrowser ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
+            title="Browse Templates"
+            data-testid="toggle-template-browser"
+          >
+            <LayoutTemplate className="h-4 w-4" />
+          </button>
           {hasContent && (
             <button
-              onClick={() => setShowSectionLib(!showSectionLib)}
+              onClick={() => { setShowSectionLib(!showSectionLib); if (!showSectionLib) setShowTemplateBrowser(false) }}
               className={`rounded-md p-1.5 transition-colors ${showSectionLib ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
               title="Section Library"
               data-testid="toggle-section-lib"
@@ -216,10 +229,25 @@ export function Builder({
         </div>
       </header>
 
+      {/* Soft upsell — never blocks publishing, hidden once subscribed */}
+      <UpgradeBanner subscribed={subscribed} />
+
       {/* Main area */}
       <div className="flex flex-1 overflow-hidden">
+        {/* Template browser sidebar */}
+        {showTemplateBrowser && (
+          <div className="w-72 shrink-0 border-r border-border bg-card overflow-y-auto">
+            <TemplateBrowser onSelect={(html, css) => {
+              const combined = css ? `<style>${css}</style>${html}` : html
+              setRawHtml(combined)
+              setShowTemplateBrowser(false)
+              setSelectedEl(null)
+            }} />
+          </div>
+        )}
+
         {/* Section library sidebar */}
-        {hasContent && showSectionLib && (
+        {hasContent && showSectionLib && !showTemplateBrowser && (
           <div className="w-64 shrink-0 border-r border-border bg-card overflow-y-auto">
             <SectionLibrary onInsert={handleInsertSection} />
           </div>

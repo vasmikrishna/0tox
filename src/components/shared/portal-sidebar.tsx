@@ -7,7 +7,8 @@ import { FEATURES } from "@/lib/features"
 import {
   LayoutDashboard, FolderKanban, Plus, Users,
   CreditCard, Image, Sliders, Mail, LogOut, ChevronRight, UserCheck, ClipboardList,
-  Building2, ChevronsUpDown, Check, Package, ShoppingCart, LayoutTemplate, CalendarClock, Globe
+  Building2, ChevronsUpDown, Check, Package, ShoppingCart, LayoutTemplate, CalendarClock, Globe,
+  Newspaper, Receipt, Menu, X
 } from "lucide-react"
 
 interface NavItem {
@@ -35,7 +36,9 @@ const adminNav: NavItem[] = [
   { label: "Products", href: "/admin/products", icon: Package },
   { label: "Orders", href: "/admin/orders", icon: ShoppingCart },
   { label: "Pages", href: "/admin/pages", icon: LayoutTemplate },
+  { label: "Blog", href: "/admin/blog", icon: Newspaper },
   { label: "Portfolio", href: "/admin/portfolio", icon: Image },
+  { label: "Billing", href: "/admin/billing", icon: Receipt },
   { label: "Domain", href: "/admin/config/domain", icon: Globe },
   { label: "Config", href: "/admin/config/intake", icon: Sliders },
 ]
@@ -67,10 +70,15 @@ export function PortalSidebar({ role, userName, userEmail }: PortalSidebarProps)
     ...(FEATURES.ecommerce ? [] : ["/admin/products", "/admin/orders"]),
     ...(FEATURES.pageBuilder ? [] : ["/admin/pages"]),
     ...(FEATURES.bookings ? [] : ["/admin/bookings"]),
+    ...(FEATURES.blog ? [] : ["/admin/blog"]),
   ]
   const nav = (role === "admin" ? adminNav : role === "employee" ? employeeNav : clientNav)
     .filter((item) => !hiddenHrefs.includes(item.href))
   const [newEnquiries, setNewEnquiries] = useState(0)
+
+  // Mobile off-canvas drawer state. Closes automatically on navigation.
+  const [mobileOpen, setMobileOpen] = useState(false)
+  useEffect(() => { setMobileOpen(false) }, [pathname])
 
   // Workspace switcher
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
@@ -126,7 +134,48 @@ export function PortalSidebar({ role, userName, userEmail }: PortalSidebarProps)
   }
 
   return (
-    <aside className="w-64 flex-shrink-0 border-r border-border h-screen sticky top-0 flex flex-col">
+    <>
+      {/* Mobile top bar — hidden on md+ where the static sidebar is shown. */}
+      <header className="md:hidden fixed top-0 inset-x-0 z-40 h-14 flex items-center gap-3 border-b border-border bg-background px-4">
+        <button
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open menu"
+          data-testid="portal-sidebar-open"
+          className="p-2 -ml-2 rounded-lg hover:bg-accent transition-colors"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <Link href="/" className="text-lg font-bold tracking-tight">Site9</Link>
+      </header>
+
+      {/* Backdrop — only on mobile when the drawer is open. */}
+      {mobileOpen && (
+        <div
+          onClick={() => setMobileOpen(false)}
+          className="md:hidden fixed inset-0 z-40 bg-black/40"
+          aria-hidden="true"
+        />
+      )}
+
+    <aside
+      className={cn(
+        "w-64 flex-shrink-0 border-r border-border flex flex-col bg-background",
+        // Mobile: off-canvas drawer that slides in over the content.
+        "fixed inset-y-0 left-0 z-50 transition-transform duration-200",
+        mobileOpen ? "translate-x-0" : "-translate-x-full",
+        // Desktop: static sticky sidebar, always visible.
+        "md:sticky md:top-0 md:z-auto md:h-screen md:translate-x-0"
+      )}
+    >
+      {/* Close button — mobile only. */}
+      <button
+        onClick={() => setMobileOpen(false)}
+        aria-label="Close menu"
+        data-testid="portal-sidebar-close"
+        className="md:hidden absolute top-3 right-3 p-2 rounded-lg hover:bg-accent transition-colors z-10"
+      >
+        <X className="h-5 w-5" />
+      </button>
 
       {/* Workspace switcher (only shown when user has multiple workspaces) */}
       {workspaces.length > 1 ? (
@@ -190,6 +239,7 @@ export function PortalSidebar({ role, userName, userEmail }: PortalSidebarProps)
             <Link
               key={item.href + item.label}
               href={item.href}
+              onClick={() => setMobileOpen(false)}
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
                 active
@@ -229,5 +279,6 @@ export function PortalSidebar({ role, userName, userEmail }: PortalSidebarProps)
         </button>
       </div>
     </aside>
+    </>
   )
 }
