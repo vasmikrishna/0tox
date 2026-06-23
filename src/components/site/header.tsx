@@ -11,6 +11,7 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
 
   const navLinks = [
     { href: "/services", label: "Services" },
+    { href: "/templates", label: "Templates" },
     { href: "/about", label: "About" },
     { href: "/work", label: "Our Work" },
     { href: "/contact", label: "Contact" },

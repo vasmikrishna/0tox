@@ -13,7 +13,7 @@ export function getStripe() {
       throw new Error("STRIPE_SECRET_KEY is not configured")
     }
     client = new Stripe(key, {
-      apiVersion: "2026-04-22.dahlia",
+      apiVersion: "2026-05-27.dahlia",
     })
   }
   return client

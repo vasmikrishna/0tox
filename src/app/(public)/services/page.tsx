@@ -1,8 +1,19 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { Check, Phone, ArrowRight } from "lucide-react"
 import { getSiteSettings, s, features } from "@/lib/site-settings"
 
-export const metadata = { title: "Features | Site9" }
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSiteSettings()
+  const siteName = settings.site_name ?? "Site9"
+  const description = `Everything you need to get online with ${siteName} — launch, showcase, and grow your business.`
+  return {
+    title: "Features",
+    description,
+    alternates: { canonical: "/services" },
+    openGraph: { title: `Features | ${siteName}`, description },
+  }
+}
 
 export default async function ServicesPage() {
   const settings = await getSiteSettings()

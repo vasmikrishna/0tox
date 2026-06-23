@@ -39,7 +39,7 @@ Make it modern, clean, and professional.`
 
     const ai = new GoogleGenAI({ apiKey: geminiKey })
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-2.0-flash-lite",
       contents: userMessage,
       config: { systemInstruction: SYSTEM, maxOutputTokens: 8192, temperature: 0.7 },
     })

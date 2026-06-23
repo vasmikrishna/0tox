@@ -20,22 +20,18 @@ async function getHomepageOverride(): Promise<CustomPage | null> {
   }
   try {
     const { createClient } = await import("@/lib/supabase/server")
-    const { getCurrentTenant, getTenantSlug } = await import("@/lib/tenant")
+    const { getTenantSlug } = await import("@/lib/tenant")
     const slug = await getTenantSlug()
-    // Don't override the main marketing page — only show tenant homepages
-    // on real subdomains (not the localhost fallback "0tox" tenant)
     if (slug === "0tox" || !slug) return null
-    const supabase = await createClient()
-    const tenant = await getCurrentTenant().catch(() => null)
-    if (!tenant?.id) return null
-    const { data } = await supabase
-      .from("custom_pages")
-      .select("*")
-      .eq("is_homepage", true)
-      .eq("status", "published")
-      .eq("tenant_id", tenant.id)
-      .maybeSingle()
-    return (data as CustomPage | null) ?? null
+    const supabase = createClient()
+    const [tenantRes, pagesRes] = await Promise.all([
+      supabase.from("tenants").select("id").eq("slug", slug).eq("status", "active").maybeSingle(),
+      supabase.from("custom_pages").select("*").eq("is_homepage", true).eq("status", "published"),
+    ])
+    const tenantId = (tenantRes.data as { id: string } | null)?.id
+    const pages = pagesRes.data as CustomPage[] | null
+    if (!tenantId || !pages?.length) return null
+    return pages.find((p) => p.tenant_id === tenantId) ?? null
   } catch {
     return null
   }
@@ -116,13 +112,13 @@ async function getPortfolio() {
 const NAV_LINKS = [
   { href: "#services", label: "Features" },
   { href: "#pricing", label: "Pricing" },
+  { href: "/templates", label: "Templates" },
   { href: "#portfolio", label: "Examples" },
   { href: "#about", label: "About" },
   { href: "#contact", label: "Contact" },
 ]
 
 export default async function LandingPage() {
-  // If an admin has published a custom homepage, render it instead of the default landing page.
   const homepageOverride = await getHomepageOverride()
   if (homepageOverride) {
     return (

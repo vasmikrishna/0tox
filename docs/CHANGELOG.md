@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added — Subscriptions / Razorpay billing (#4)
+- `subscriptions` table (one row per tenant): plan, Razorpay subscription/plan/customer ids, status, `current_end`. RLS disabled + grants per project convention (`013_subscriptions.sql`).
+- **Soft upsell** — publishing is never blocked. Unsubscribed tenants see an `UpgradeBanner` in the builder ("Unlock your site's full potential"); it disappears once a subscription is active.
+- Plans: **Monthly ₹29** and **Annual ₹108** (₹9/month). Created via `pnpm exec tsx src/scripts/razorpay-setup.ts`.
+- API: `POST /api/billing/subscribe` (creates Razorpay subscription + returns Checkout params), `POST /api/billing/verify` (verifies the Checkout signature, activates), `POST /api/billing/webhook` (subscription lifecycle → status), `GET /api/billing/status`.
+- Browser uses the Razorpay Checkout widget (loaded on demand). **No Razorpay keys?** `subscribe` unlocks inline (dev fallback) so the flow stays demoable.
+- `lib/razorpay.ts` (client, plan catalogue, signature verification) and `lib/subscription.ts` (entitlement check, upserts). Unit tests in `src/lib/subscription.test.ts` (`pnpm test`).
+
 ### Added — Bookings module
 - `bookings` and `calendar_blocks` tables (tenant-scoped), RLS disabled + grants per project convention.
 - Admin **Bookings** (`/admin/bookings`) with two tabs:

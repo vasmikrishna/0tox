@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { CheckCircle2, PackageOpen } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
@@ -8,7 +9,12 @@ import { MOCK_PRODUCTS } from "@/lib/mock-data"
 import { getCurrentTenant } from "@/lib/tenant"
 import type { Product } from "@/types"
 
-export const metadata = { title: "Shop | Site9" }
+export const metadata: Metadata = {
+  title: "Shop",
+  description: "Browse products from the studio.",
+  alternates: { canonical: "/shop" },
+  openGraph: { title: "Shop | Site9", description: "Browse products from the studio." },
+}
 
 const supabaseConfigured = () =>
   process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http") && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY

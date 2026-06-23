@@ -4,7 +4,7 @@ import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
-import { Wand2, Upload, ImageIcon, MousePointerClick } from "lucide-react"
+import { Wand2, Upload, ImageIcon, MousePointerClick, Search, Check, Loader2, X } from "lucide-react"
 
 export interface SelectedElement {
   editKey: string
@@ -61,6 +61,14 @@ function EditorPanelInner({
   const [aiLoading, setAiLoading] = useState(false)
   const [uploadLoading, setUploadLoading] = useState(false)
   const [error, setError] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<Array<{
+    id: string; thumb: string; full: string; alt: string
+    source: "unsplash" | "pexels" | "pixabay"; photographer: string
+  }>>([])
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [showSearch, setShowSearch] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function handleAiRewrite() {
@@ -116,6 +124,54 @@ function EditorPanelInner({
   function handleImageUrlSubmit() {
     if (!imageUrl.trim()) return
     onUpdateAttr(selected.editKey, "src", imageUrl.trim())
+  }
+
+  async function handleImageSearch() {
+    if (!searchQuery.trim()) return
+    setError("")
+    setSearchLoading(true)
+    try {
+      const res = await fetch(`/api/build/image-search?q=${encodeURIComponent(searchQuery.trim())}`)
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error ?? "Search failed")
+        return
+      }
+      setSearchResults(data.results ?? [])
+      if ((data.results ?? []).length === 0) {
+        setError("No images found. Try a different search term.")
+      }
+    } catch {
+      setError("Search failed. Try again.")
+    } finally {
+      setSearchLoading(false)
+    }
+  }
+
+  async function handleSelectSearchImage(result: (typeof searchResults)[0]) {
+    setError("")
+    setDownloadingId(result.id)
+    try {
+      const res = await fetch("/api/build/image-search/download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: result.full }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error ?? "Failed to save image")
+        return
+      }
+      setImageUrl(data.url)
+      onUpdateAttr(selected.editKey, "src", data.url)
+      setShowSearch(false)
+      setSearchResults([])
+      setSearchQuery("")
+    } catch {
+      setError("Could not save image. Try again.")
+    } finally {
+      setDownloadingId(null)
+    }
   }
 
   const zoneName = selected.editKey.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
@@ -219,6 +275,91 @@ function EditorPanelInner({
                 <ImageIcon className="h-3.5 w-3.5" />
               </Button>
             </div>
+          </div>
+
+          <div className="border-t border-border pt-3">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs font-medium text-muted-foreground">Search free images</p>
+              {showSearch && (
+                <button
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => { setShowSearch(false); setSearchResults([]); setSearchQuery("") }}
+                  data-testid="editor-search-close"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            {!showSearch ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowSearch(true)}
+                data-testid="editor-search-toggle"
+              >
+                <Search className="h-3.5 w-3.5" /> Search Photos
+              </Button>
+            ) : (
+              <>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g. salon interior, hair styling..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleImageSearch()}
+                    data-testid="editor-image-search"
+                    autoFocus
+                  />
+                  <Button
+                    size="sm"
+                    variant="brand"
+                    disabled={!searchQuery.trim()}
+                    loading={searchLoading}
+                    onClick={handleImageSearch}
+                    data-testid="editor-image-search-btn"
+                  >
+                    <Search className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+
+                {searchResults.length > 0 && (
+                  <div className="mt-3 grid grid-cols-2 gap-2" data-testid="editor-search-results">
+                    {searchResults.map((result) => (
+                      <button
+                        key={result.id}
+                        className="group relative overflow-hidden rounded-lg border border-border transition-colors hover:border-primary"
+                        onClick={() => handleSelectSearchImage(result)}
+                        disabled={downloadingId !== null}
+                        data-testid={`search-result-${result.id}`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={result.thumb}
+                          alt={result.alt}
+                          className="aspect-video w-full object-cover"
+                          loading="lazy"
+                        />
+                        {downloadingId === result.id && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-background/70">
+                            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 flex items-center justify-center bg-background/0 opacity-0 transition-all group-hover:bg-background/50 group-hover:opacity-100">
+                          <Check className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-1.5 pb-1 pt-3">
+                          <p className="truncate text-[10px] text-white/80">
+                            {result.photographer}
+                            <span className="ml-1 rounded bg-white/20 px-1 text-[9px]">{result.source}</span>
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </>
       )}
