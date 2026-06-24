@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added — Search + pagination across list/table views (#6)
+- New reusable client component `src/components/paginated-list.tsx`: a search box + Previous/Next pager (with a result count) that filters the passed-in rows case-insensitively and slices to the current page. Controls auto-hide when not needed (pager only shows once results exceed the page size).
+- Applied across **16 management lists**. Server-component pages keep their Supabase query and delegate rendering to a sibling `"use client"` `*-list.tsx` that paginates the already-fetched rows:
+  - **Superadmin:** Tenants, Blog, Palettes, Reference Sites (search + pagination); Templates, Sections (search only — status grouping preserved).
+  - **Admin:** Clients, Employees, Projects, Surveys, Payments, Orders, Pages, Portfolio, Products, Blog (search + pagination).
+- No change to queries, styling, handlers, or empty-states. Summary totals (e.g. payments) are still computed over the full set, not the page.
+- Out of scope: public pages (need SEO server-side paging) and server-side `.range()` paging (client-side is fine at current scale).
+
 ### Added — Blog (per-tenant, all admins)
 - `blog_posts` table (tenant-scoped): title, slug, excerpt, TipTap `content_html` + `content_json`, cover image, author, tags, draft/published, and full SEO fields (`meta_title`, `meta_description`, `og_image_url`, `canonical_url`, `noindex`, `published_at`). RLS disabled + grants per project convention (`016_blog.sql`). Behind `FEATURES.blog` (on for all tenants).
 - Admin **Blog** (`/admin/blog`): list, create, edit, delete. TipTap rich-text editor (`blog-editor.tsx`) with headings/lists/links/formatting, cover-image upload (reuses `/api/build/upload`), tags, and a collapsible SEO panel.

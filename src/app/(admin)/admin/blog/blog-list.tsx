@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Trash2 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import type { BlogPost } from "@/types"
+import { PaginatedList } from "@/components/paginated-list"
 
 export function BlogList() {
   const router = useRouter()
@@ -68,8 +69,16 @@ export function BlogList() {
           {error}
         </div>
       )}
+      <PaginatedList
+        items={posts}
+        pageSize={10}
+        searchPlaceholder="Search posts by title, slug, or status..."
+        testId="blog"
+        searchText={(post) => `${post.title} ${post.slug} ${post.status}`}
+      >
+        {(pagePosts) => (
       <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
-        {posts.map((post) => (
+        {pagePosts.map((post) => (
           <div key={post.id} className="flex items-center gap-4 px-4 py-3 hover:bg-accent transition-colors group">
             <div className="min-w-0 flex-1">
               <Link
@@ -105,6 +114,8 @@ export function BlogList() {
           </div>
         ))}
       </div>
+        )}
+      </PaginatedList>
     </div>
   )
 }

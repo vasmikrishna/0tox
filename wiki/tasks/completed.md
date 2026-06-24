@@ -1,5 +1,12 @@
 # Completed tasks
 
+- **2026-06-24 — Search + pagination for list/table views** — #6
+  Reusable `src/components/paginated-list.tsx` (search box + Previous/Next pager,
+  auto-hiding) applied to 16 admin/superadmin lists. Server pages keep their query
+  and delegate to sibling `*-list.tsx` client components paginating fetched rows.
+  Templates/Sections get search only (status grouping preserved). No query/style
+  changes.
+
 - **2026-06-24 — Blog (per-tenant, all admins)**
   TipTap blog with SEO: `blog_posts` (`016_blog.sql`), admin CRUD at `/admin/blog`,
   super-admin oversight at `/superadmin/blog`, public `/blog` + `/blog/[slug]` with

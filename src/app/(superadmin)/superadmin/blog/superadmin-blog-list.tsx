@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Loader2, Trash2 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
+import { PaginatedList } from "@/components/paginated-list"
 import type { BlogPost } from "@/types"
 
 interface BlogPostWithTenant extends BlogPost {
@@ -91,21 +92,29 @@ export function SuperadminBlogList() {
           {error}
         </div>
       )}
-      <div className="border border-border rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/30">
-                <th className="text-left px-4 py-3 font-medium">Title</th>
-                <th className="text-left px-4 py-3 font-medium">Tenant</th>
-                <th className="text-left px-4 py-3 font-medium">Status</th>
-                <th className="text-left px-4 py-3 font-medium">Updated</th>
-                <th className="text-right px-4 py-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {posts.map((post) => (
-                <tr key={post.id} className="hover:bg-accent/50 transition-colors">
+      <PaginatedList
+        items={posts}
+        pageSize={10}
+        searchPlaceholder="Search posts by title, slug, tenant, or status..."
+        testId="blog"
+        searchText={(post) => `${post.title} ${post.slug} ${post.tenant_name ?? ""} ${post.status}`}
+      >
+        {(pagePosts) => (
+          <div className="border border-border rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    <th className="text-left px-4 py-3 font-medium">Title</th>
+                    <th className="text-left px-4 py-3 font-medium">Tenant</th>
+                    <th className="text-left px-4 py-3 font-medium">Status</th>
+                    <th className="text-left px-4 py-3 font-medium">Updated</th>
+                    <th className="text-right px-4 py-3 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {pagePosts.map((post) => (
+                    <tr key={post.id} className="hover:bg-accent/50 transition-colors">
                   <td className="px-4 py-3">
                     <div>
                       <p className="font-medium truncate">{post.title}</p>
@@ -157,10 +166,12 @@ export function SuperadminBlogList() {
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </PaginatedList>
     </div>
   )
 }
