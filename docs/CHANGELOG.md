@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Added — Customer accounts + unified "My Businesses" hub (#7)
+- **Public entry points.** Each tenant's public site header now shows **Sign in / Sign up** when logged out, and a **My account** dropdown (→ My businesses, My dashboard, Sign out) when logged in. `(public)/layout.tsx` reads the shared session and passes it to `components/site/header.tsx`.
+- **Unified hub** at `/account` (new `(account)` route group). Lists every tenant the person belongs to, split into **Businesses you own** (role `admin`), **You're a customer of** (role `client`), and **Businesses you work with** (role `employee`). Each card's **Enter** switches the session to that tenant (`/api/auth/switch-workspace`) and navigates to its subdomain. Plus a "Create a new website" CTA (→ `/start`). The route lives outside the `(client)/(admin)/(employee)` groups so it is **not** subject to subdomain tenant-isolation; the page enforces auth itself (no middleware change).
+- **Customer portal views** in `(client)`: **My Orders** (`/client/orders` + detail, scoped by `customer_id` + `tenant_id`), **My Bookings** (`/client/bookings`, by email + tenant), and **Profile** (`/client/profile`). Sidebar nav gains these (Orders/Bookings gated by `FEATURES.ecommerce` / `FEATURES.bookings`).
+- **Booking↔customer linkage.** `bookings.customer_id` added (`015_bookings_customer_id.sql`, backfilled by email-in-tenant); `POST /api/book` now sets it when the requester is signed into that tenant.
+- Shared `getWorkspacesForEmail()` helper (`src/lib/workspaces.ts`); `/api/auth/workspaces` refactored onto it. Built on the existing model (no memberships-table refactor) — no schema change to identity. All new reads run server-side (service role) filtered by **both** user identity and current `tenant_id`.
+
 ### Added — Search + pagination across list/table views (#6)
 - New reusable client component `src/components/paginated-list.tsx`: a search box + Previous/Next pager (with a result count) that filters the passed-in rows case-insensitively and slices to the current page. Controls auto-hide when not needed (pager only shows once results exceed the page size).
 - Applied across **16 management lists**. Server-component pages keep their Supabase query and delegate rendering to a sibling `"use client"` `*-list.tsx` that paginates the already-fetched rows:

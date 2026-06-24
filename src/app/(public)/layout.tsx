@@ -2,8 +2,9 @@ import type { Metadata } from "next"
 import { getSiteSettings } from "@/lib/site-settings"
 import { getTenantSlug, getCurrentTenant } from "@/lib/tenant"
 import { getCanonicalOrigin, isMainSite, buildLocalBusinessJsonLd, buildWebSiteJsonLd } from "@/lib/seo"
-import { SiteHeader } from "@/components/site/header"
+import { SiteHeader, type HeaderAuth } from "@/components/site/header"
 import { SiteFooter } from "@/components/site/footer"
+import { getSession } from "@/lib/session"
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings()
@@ -45,6 +46,16 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   const origin = getCanonicalOrigin(tenant, slug)
   const siteName = settings.site_name ?? "Site9"
 
+  // The session cookie is shared across all *.site9.in subdomains, so a visitor
+  // who is signed in anywhere shows as logged-in here. The hub (/account) is the
+  // cross-tenant entry point; the dropdown also deep-links into the active role's
+  // dashboard. Super-admin is treated as logged-out for the public chrome.
+  const session = await getSession()
+  const auth: HeaderAuth | null =
+    session && session.id !== "admin"
+      ? { name: session.name, email: session.email, role: session.role }
+      : null
+
   const jsonLdScripts = isMainSite(slug)
     ? [buildWebSiteJsonLd(origin, siteName)]
     : [
@@ -73,7 +84,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         />
       ))}
       <div style={{ background: "var(--site-bg)", color: "var(--site-text)", minHeight: "100vh" }}>
-        <SiteHeader settings={settings} />
+        <SiteHeader settings={settings} auth={auth} />
         <main>{children}</main>
         <SiteFooter settings={settings} />
       </div>

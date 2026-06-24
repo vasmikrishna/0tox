@@ -462,6 +462,7 @@ export type BookingStatus = "pending" | "confirmed" | "completed" | "cancelled"
 export interface Booking {
   id: string
   tenant_id?: string | null
+  customer_id?: string | null
   customer_name: string
   customer_email?: string | null
   customer_phone?: string | null

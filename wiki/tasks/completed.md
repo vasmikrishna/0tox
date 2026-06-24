@@ -1,5 +1,14 @@
 # Completed tasks
 
+- **2026-06-24 — Customer accounts + unified "My Businesses" hub** — #7
+  Public sites get Sign in/Sign up + a "My account" dropdown. New `/account` hub
+  (`(account)` group, outside tenant-isolation) lists every business you belong to
+  — owned / customer-of / work-with — with "Enter" via `switch-workspace`. Client
+  portal gains Orders, Bookings, Profile (scoped by identity + tenant). Added
+  `bookings.customer_id` (`015`, backfilled) set on create when signed in. Shared
+  `getWorkspacesForEmail()`; built on the existing email-keyed model (no
+  memberships refactor). See [features/customer-accounts.md](../features/customer-accounts.md).
+
 - **2026-06-24 — Search + pagination for list/table views** — #6
   Reusable `src/components/paginated-list.tsx` (search box + Previous/Next pager,
   auto-hiding) applied to 16 admin/superadmin lists. Server pages keep their query

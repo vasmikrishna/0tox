@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentTenant } from "@/lib/tenant"
 import { getBookingConfig } from "@/lib/booking-config"
+import { getSession } from "@/lib/session"
 
 const supabaseConfigured = () =>
   process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http") &&
@@ -97,9 +98,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "That slot was just taken — please choose another time." }, { status: 409 })
   }
 
+  // Link the booking to the logged-in customer — but only when their session is
+  // actually for THIS tenant, so customer_id always points at the right per-tenant
+  // user row (a visitor could be signed into a different business's session).
+  const session = await getSession()
+  const customer_id = session?.id && tenant?.id && session.tenant_id === tenant.id ? session.id : null
+
   const { data, error } = await supabase
     .from("bookings")
-    .insert({ ...record, tenant_id: tenant?.id ?? null } as never)
+    .insert({ ...record, tenant_id: tenant?.id ?? null, customer_id } as never)
     .select()
     .single()
 

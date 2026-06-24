@@ -22,6 +22,9 @@ const clientNav: NavItem[] = [
   { label: "Dashboard", href: "/client/dashboard", icon: LayoutDashboard },
   { label: "My Projects", href: "/client/projects", icon: FolderKanban },
   { label: "New Project", href: "/client/projects/new", icon: Plus },
+  { label: "My Orders", href: "/client/orders", icon: ShoppingCart },
+  { label: "My Bookings", href: "/client/bookings", icon: CalendarClock },
+  { label: "Profile", href: "/client/profile", icon: UserCheck },
 ]
 
 const adminNav: NavItem[] = [
@@ -67,9 +70,9 @@ export function PortalSidebar({ role, userName, userEmail }: PortalSidebarProps)
   const pathname = usePathname()
   const router = useRouter()
   const hiddenHrefs: string[] = [
-    ...(FEATURES.ecommerce ? [] : ["/admin/products", "/admin/orders"]),
+    ...(FEATURES.ecommerce ? [] : ["/admin/products", "/admin/orders", "/client/orders"]),
     ...(FEATURES.pageBuilder ? [] : ["/admin/pages"]),
-    ...(FEATURES.bookings ? [] : ["/admin/bookings"]),
+    ...(FEATURES.bookings ? [] : ["/admin/bookings", "/client/bookings"]),
     ...(FEATURES.blog ? [] : ["/admin/blog"]),
   ]
   const nav = (role === "admin" ? adminNav : role === "employee" ? employeeNav : clientNav)
