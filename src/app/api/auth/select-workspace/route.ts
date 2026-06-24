@@ -29,6 +29,16 @@ export async function POST(req: Request) {
   const valid = await bcrypt.compare(password, user.password_hash)
   if (!valid) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
 
+  // Resolve the workspace slug so the client can hand off to that subdomain.
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("slug, onboarding_complete, status")
+    .eq("id", tenantId)
+    .maybeSingle()
+  if (!tenant || tenant.status !== "active") {
+    return NextResponse.json({ error: "Workspace unavailable" }, { status: 403 })
+  }
+
   await createSession({ id: user.id, email: user.email, name: user.name, role: user.role, tenant_id: user.tenant_id })
-  return NextResponse.json({ role: user.role })
+  return NextResponse.json({ role: user.role, onboarding_complete: tenant.onboarding_complete ?? false, slug: tenant.slug })
 }

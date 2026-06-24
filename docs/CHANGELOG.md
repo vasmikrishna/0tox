@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Global login on the main domain (#5)
+- `/api/auth/login` is now **host-aware**. On a tenant subdomain or custom domain login stays **bound** to that tenant (`email + tenant_id`). On the **main domain** (`site9.in` / `www` / localhost) it does a **global** login: matches the account across all tenants, then the login page hands off to the owner's own subdomain (`https://{slug}.site9.in{dashboard}`) — the session cookie is scoped to `.site9.in` so it carries.
+- Emails are not globally unique (one email can belong to 2–3 tenants): multiple matches return the existing **workspace picker**; `/api/auth/select-workspace` re-verifies and returns the slug for the same hand-off.
+- Superadmin hardcoded `ADMIN_EMAIL`/`ADMIN_PASSWORD` account is unchanged and checked first; middleware still enforces tenant isolation on protected routes.
+
 ### Added — Blog (per-tenant, all admins)
 - `blog_posts` table (tenant-scoped): title, slug, excerpt, TipTap `content_html` + `content_json`, cover image, author, tags, draft/published, and full SEO fields (`meta_title`, `meta_description`, `og_image_url`, `canonical_url`, `noindex`, `published_at`). RLS disabled + grants per project convention (`016_blog.sql`). Behind `FEATURES.blog` (on for all tenants).
 - Admin **Blog** (`/admin/blog`): list, create, edit, delete. TipTap rich-text editor (`blog-editor.tsx`) with headings/lists/links/formatting, cover-image upload (reuses `/api/build/upload`), tags, and a collapsible SEO panel.

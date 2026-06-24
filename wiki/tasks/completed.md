@@ -1,5 +1,11 @@
 # Completed tasks
 
+- **2026-06-24 — Global login on the main domain** — #5
+  `/api/auth/login` is host-aware: subdomain → tenant-bound; main domain → global
+  login across all tenants, then hand off to the owner's `{slug}.site9.in`
+  (cookie scoped to `.site9.in`). Multi-tenant emails use the workspace picker
+  (`/api/auth/select-workspace`). Superadmin account unchanged.
+
 - **2026-06-24 — Blog (per-tenant, all admins)**
   TipTap blog with SEO: `blog_posts` (`016_blog.sql`), admin CRUD at `/admin/blog`,
   super-admin oversight at `/superadmin/blog`, public `/blog` + `/blog/[slug]` with

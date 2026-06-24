@@ -102,6 +102,31 @@ export default function LoginPage() {
     setError("")
   }
 
+  // Send the user into their workspace after a successful login. When the slug
+  // belongs to a different subdomain than the one we're on (e.g. signing in on
+  // the main site9.in), hand off to that subdomain so the session cookie — which
+  // is scoped to .site9.in — lands the owner on their own site.
+  async function goToWorkspace(data: { role: string; onboarding_complete?: boolean; superadmin?: boolean; slug?: string }) {
+    const dash = dashboardFor(data.role, data.onboarding_complete, data.superadmin)
+    const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN ?? "site9.in"
+    const currentSlug = getSubdomainSlug()
+
+    if (data.slug && data.slug !== currentSlug) {
+      if (process.env.NODE_ENV === "production") {
+        window.location.href = `https://${data.slug}.${baseDomain}${dash}`
+        return
+      }
+      // Dev has no real subdomains: align the dev tenant cookie, then navigate.
+      await fetch("/api/dev/switch-tenant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: data.slug }),
+      }).catch(() => {})
+    }
+    router.push(dash)
+    router.refresh()
+  }
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
@@ -122,8 +147,7 @@ export default function LoginPage() {
       return
     }
 
-    router.push(dashboardFor(data.role, data.onboarding_complete, data.superadmin))
-    router.refresh()
+    await goToWorkspace(data)
   }
 
   async function selectWorkspace(ws: Workspace) {
@@ -136,8 +160,7 @@ export default function LoginPage() {
     const data = await res.json()
     setSwitchingId(null)
     if (!res.ok) { setError(data.error ?? "Failed to switch"); return }
-    router.push(dashboardFor(data.role, data.onboarding_complete))
-    router.refresh()
+    await goToWorkspace(data)
   }
 
   const showTenantBar = tenantReady && !pickingWorkspace && (subdomainSlug || (IS_DEV && allTenants.length > 0))
