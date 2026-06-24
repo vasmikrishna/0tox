@@ -4,10 +4,15 @@ import { createSession } from "@/lib/session"
 import { getTenantSlug, getTenantBySlug } from "@/lib/tenant"
 
 export async function POST(req: Request) {
-  const { email, password } = await req.json()
+  const { email, password, phone } = await req.json()
   if (!email || !password) {
     return NextResponse.json({ error: "Email and password required" }, { status: 400 })
   }
+
+  // Issue #9: the login form optionally collects a phone number. Login itself
+  // stays email + password — we just persist the phone onto the matched
+  // user(s) once their credentials check out (migration 017 adds the column).
+  const phoneToStore = typeof phone === "string" ? phone.trim() : ""
 
   const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@0tox.com"
   const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "Admin@0tox2026"
@@ -61,6 +66,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
     }
 
+    if (phoneToStore) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from("users").update({ phone: phoneToStore }).eq("id", user.id)
+    }
+
     await createSession({ id: user.id, email: user.email, name: user.name, role: user.role, tenant_id: user.tenant_id })
     return NextResponse.json({ role: user.role, onboarding_complete: tenant.onboarding_complete ?? false, slug: tenant.slug })
   }
@@ -80,6 +90,17 @@ export async function POST(req: Request) {
   }
   if (matched.length === 0) {
     return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
+  }
+
+  // Same person across every tenant they belong to → store the collected phone
+  // on all matched accounts. (Applied before the workspace picker so it lands
+  // even when the user owns multiple workspaces.)
+  if (phoneToStore) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any)
+      .from("users")
+      .update({ phone: phoneToStore })
+      .in("id", matched.map((u) => u.id))
   }
 
   // Pull the tenants for the matched accounts (active only).

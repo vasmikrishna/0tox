@@ -1,5 +1,14 @@
 # Completed tasks
 
+- **2026-06-24 — Login page: show/hide password + phone number field** — #9
+  Added eye-icon show/hide password toggle (`data-testid="login-password-toggle"`)
+  inside the password field on `/login`. Also added an optional phone number field
+  (`data-testid="login-phone"`). Phone is sent in the login API payload for
+  future use; backend ignores it today (email+password auth unchanged). Consistent
+  toggle also added to the `/start` registration form
+  (`data-testid="start-password-toggle"`). No new type errors (`tsc --noEmit`
+  clean). See [features/auth-login.md](../features/auth-login.md).
+
 - **2026-06-24 — Customer accounts + unified "My Businesses" hub** — #7
   Public sites get Sign in/Sign up + a "My account" dropdown. New `/account` hub
   (`(account)` group, outside tenant-isolation) lists every business you belong to
