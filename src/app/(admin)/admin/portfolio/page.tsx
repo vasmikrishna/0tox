@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Plus, Eye, EyeOff, Trash2, ExternalLink } from "lucide-react"
 import type { PortfolioItem, ServiceTier } from "@/types"
 import { MOCK_PORTFOLIO } from "@/lib/mock-data"
+import { PaginatedList } from "@/components/paginated-list"
 
 const supabaseConfigured = () =>
   process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http") &&
@@ -147,8 +148,16 @@ export default function AdminPortfolioPage() {
       ) : !items.length ? (
         <Card className="border-dashed"><CardContent className="py-12 text-center text-muted-foreground text-sm">No portfolio items yet — add your first one above</CardContent></Card>
       ) : (
+        <PaginatedList
+          items={items}
+          pageSize={12}
+          searchPlaceholder="Search portfolio by title, description, tier, or tag..."
+          testId="portfolio"
+          searchText={(item) => `${item.title} ${item.description ?? ""} ${item.service_tier ?? ""} ${(item.tags as string[] | undefined)?.join(" ") ?? ""}`}
+        >
+          {(pageItems) => (
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-          {items.map((item) => (
+          {pageItems.map((item) => (
             <Card key={item.id} className={!item.visible ? "opacity-50" : ""}>
               <div className="aspect-video bg-muted overflow-hidden rounded-t-xl">
                 <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
@@ -191,6 +200,8 @@ export default function AdminPortfolioPage() {
             </Card>
           ))}
         </div>
+          )}
+        </PaginatedList>
       )}
     </div>
   )

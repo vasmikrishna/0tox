@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added — Search + pagination across list/table views (#6)
+- New reusable client component `src/components/paginated-list.tsx`: a search box + Previous/Next pager (with a result count) that filters the passed-in rows case-insensitively and slices to the current page. Controls auto-hide when not needed (pager only shows once results exceed the page size).
+- Applied across **16 management lists**. Server-component pages keep their Supabase query and delegate rendering to a sibling `"use client"` `*-list.tsx` that paginates the already-fetched rows:
+  - **Superadmin:** Tenants, Blog, Palettes, Reference Sites (search + pagination); Templates, Sections (search only — status grouping preserved).
+  - **Admin:** Clients, Employees, Projects, Surveys, Payments, Orders, Pages, Portfolio, Products, Blog (search + pagination).
+- No change to queries, styling, handlers, or empty-states. Summary totals (e.g. payments) are still computed over the full set, not the page.
+- Out of scope: public pages (need SEO server-side paging) and server-side `.range()` paging (client-side is fine at current scale).
+
 ### Added — Global login on the main domain (#5)
 - `/api/auth/login` is now **host-aware**. On a tenant subdomain or custom domain login stays **bound** to that tenant (`email + tenant_id`). On the **main domain** (`site9.in` / `www` / localhost) it does a **global** login: matches the account across all tenants, then the login page hands off to the owner's own subdomain (`https://{slug}.site9.in{dashboard}`) — the session cookie is scoped to `.site9.in` so it carries.
 - Emails are not globally unique (one email can belong to 2–3 tenants): multiple matches return the existing **workspace picker**; `/api/auth/select-workspace` re-verifies and returns the slug for the same hand-off.

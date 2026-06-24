@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/utils"
 import { Plus, Minus, Trash2 } from "lucide-react"
 import type { Product, ProductStatus } from "@/types"
+import { PaginatedList } from "@/components/paginated-list"
 
 const JSON_HEADERS = { "Content-Type": "application/json" }
 const STATUSES: ProductStatus[] = ["draft", "active", "archived"]
@@ -245,8 +246,16 @@ export function ProductsAdmin({ products }: { products: Product[] }) {
           <CardContent className="py-12 text-center text-muted-foreground text-sm">No products yet — add your first one above</CardContent>
         </Card>
       ) : (
+        <PaginatedList
+          items={items}
+          pageSize={10}
+          searchPlaceholder="Search products by name, SKU, category, or status..."
+          testId="products"
+          searchText={(product) => `${product.name} ${product.sku ?? ""} ${product.category ?? ""} ${product.status}`}
+        >
+          {(pageItems) => (
         <div className="space-y-2">
-          {items.map(product => {
+          {pageItems.map(product => {
             const onSale = product.sale_price != null && product.sale_price < product.price
             return (
               <Card key={product.id}>
@@ -327,6 +336,8 @@ export function ProductsAdmin({ products }: { products: Product[] }) {
             )
           })}
         </div>
+          )}
+        </PaginatedList>
       )}
     </div>
   )

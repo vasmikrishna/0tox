@@ -1,5 +1,12 @@
 # Completed tasks
 
+- **2026-06-24 — Search + pagination for list/table views** — #6
+  Reusable `src/components/paginated-list.tsx` (search box + Previous/Next pager,
+  auto-hiding) applied to 16 admin/superadmin lists. Server pages keep their query
+  and delegate to sibling `*-list.tsx` client components paginating fetched rows.
+  Templates/Sections get search only (status grouping preserved). No query/style
+  changes.
+
 - **2026-06-24 — Global login on the main domain** — #5
   `/api/auth/login` is host-aware: subdomain → tenant-bound; main domain → global
   login across all tenants, then hand off to the owner's `{slug}.site9.in`
