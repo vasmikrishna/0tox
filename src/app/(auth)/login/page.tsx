@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Building2, ChevronDown, Lock, ChevronRight } from "lucide-react"
+import { Building2, ChevronDown, Lock, ChevronRight, Eye, EyeOff } from "lucide-react"
 
 interface Workspace {
   userId: string
@@ -45,6 +45,8 @@ export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [phone, setPhone] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
@@ -74,12 +76,12 @@ export default function LoginPage() {
         const list = d.tenants ?? []
         setAllTenants(list)
         if (slug) {
-          const t = list.find((t: any) => t.slug === slug)
+          const t = list.find((t: { id: string; name: string; slug: string }) => t.slug === slug)
           setTenantName(t?.name ?? slug)
         } else if (IS_DEV) {
           const cookie = getDevTenantCookie()
           setActiveTenant(cookie)
-          const t = list.find((t: any) => t.slug === cookie)
+          const t = list.find((t: { id: string; name: string; slug: string }) => t.slug === cookie)
           setTenantName(t?.name ?? cookie)
         }
         setTenantReady(true)
@@ -131,10 +133,14 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError("")
+    // phone is captured in the form but the current backend login flow is
+    // email + password only. We include it in the payload so that a future
+    // backend update can consume it without any frontend changes; the API
+    // silently ignores unknown fields today.
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, ...(phone ? { phone } : {}) }),
     })
     const data = await res.json()
     setLoading(false)
@@ -281,14 +287,58 @@ export default function LoginPage() {
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
+            <Input
+              id="email"
+              data-testid="login-email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password" />
+            <div className="relative">
+              <Input
+                id="password"
+                data-testid="login-password"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                className="pr-10"
+              />
+              <button
+                type="button"
+                data-testid="login-password-toggle"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                onClick={() => setShowPassword(v => !v)}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-r-lg"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="phone">
+              Phone number <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+            </Label>
+            <Input
+              id="phone"
+              data-testid="login-phone"
+              type="tel"
+              placeholder="+91 98765 43210"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              autoComplete="tel"
+            />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" className="w-full" variant="brand" loading={loading}>Sign in</Button>
+          <Button type="submit" className="w-full" variant="brand" loading={loading} data-testid="login-submit">Sign in</Button>
         </form>
 
         <p className="text-center text-sm text-muted-foreground">
