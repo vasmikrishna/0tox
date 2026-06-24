@@ -20,8 +20,9 @@ Available to **all tenants** behind `FEATURES.blog` (currently on).
 | Admin create / edit | `/admin/blog/new`, `/admin/blog/[id]` (`blog-form.tsx`) |
 | Editor component | `src/components/admin/blog-editor.tsx` (TipTap) |
 | Super-admin oversight | `/superadmin/blog` (cross-tenant, publish/unpublish, delete) |
-| Public index | `/blog` |
-| Public post | `/blog/[slug]` |
+| Public index | `/blog` — tenant-themed hero banner, search + pagination via `BlogIndexClient` |
+| Public post | `/blog/[slug]` — tenant-themed (CSS vars), cover image hero or primary stripe |
+| Builder blog panel | `src/components/build/blog-panel.tsx` — sidebar in the website builder; lists posts, links to admin create/manage, and opens the public blog |
 | Admin API | `GET/POST /api/admin/blog`, `GET/PATCH/DELETE /api/admin/blog/[id]` |
 | Super-admin API | `GET /api/superadmin/blog`, `PATCH/DELETE /api/superadmin/blog/[id]` |
 | Article JSON-LD | `buildArticleJsonLd` in `src/lib/seo.ts` |
@@ -45,7 +46,25 @@ page renders `sanitizeHtml(content_html)`.
 - **Super-admin** (`ADMIN_EMAIL`): read + moderate (publish/unpublish/delete) across
   all tenants at `/superadmin/blog`.
 
+## Theming (public pages)
+The public `/blog` and `/blog/[slug]` pages consume the CSS custom properties
+injected by `(public)/layout.tsx`:
+- `--site-primary` — hero background, headings, links
+- `--site-accent` — tag badge borders/color
+- `--site-bg` — page background
+- `--site-text` — body text
+
+The index page has a full-width primary-colored hero section, then a `BlogIndexClient`
+client component that wraps `PaginatedList` for search and pagination (9 per page).
+The post page renders the cover image as a full-width hero overlay, or a thin
+primary-colored stripe when no cover is set.
+
+## Builder integration
+`src/components/build/blog-panel.tsx` — a sidebar panel in the website builder
+toggled by the blog icon (FileText) in the top bar. It calls `GET /api/admin/blog`
+to list the tenant's own posts, groups them into published vs. drafts, and provides
+quick links to edit posts, view live posts, create new posts, and open the public
+blog. Available at all times (not gated behind `hasContent`).
+
 ## Notes / future
-- Apply migration `016_blog.sql`.
-- Possible next: scheduled publishing, categories, RSS feed, related posts,
-  reading time, author profiles.
+- Scheduled publishing, categories, RSS feed, related posts, reading time, author profiles.

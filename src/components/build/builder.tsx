@@ -7,12 +7,13 @@ import { Textarea } from "@/components/ui/textarea"
 import {
   ArrowRight, Send, Wand2, Upload, ImageIcon, MousePointerClick,
   ExternalLink, Sparkles, Link2, Trash2, Monitor, Tablet, Smartphone,
-  LayoutGrid, LayoutTemplate, ChevronUp, ChevronDown, Search,
+  LayoutGrid, LayoutTemplate, ChevronUp, ChevronDown, Search, FileText,
 } from "lucide-react"
 import { EDITOR_OVERLAY_CSS, EDITOR_SCRIPT } from "@/lib/editor-inject"
 import { SectionLibrary } from "@/components/build/section-library"
 import { TemplateBrowser } from "@/components/build/template-browser"
 import { UpgradeBanner } from "@/components/build/upgrade-banner"
+import { BlogPanel } from "@/components/build/blog-panel"
 import { scopeSectionCss, wrapSectionHtml, getScopeClass } from "@/lib/section-css"
 import type { BusinessDetails } from "@/lib/onboarding"
 import type { SectionTemplate } from "@/types"
@@ -52,6 +53,7 @@ export function Builder({
   const [viewport, setViewport] = useState<Viewport>("desktop")
   const [showSectionLib, setShowSectionLib] = useState(false)
   const [showTemplateBrowser, setShowTemplateBrowser] = useState(false)
+  const [showBlogPanel, setShowBlogPanel] = useState(false)
 
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const htmlResolveRef = useRef<((h: string) => void) | null>(null)
@@ -201,7 +203,7 @@ export function Builder({
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => { setShowTemplateBrowser(!showTemplateBrowser); if (!showTemplateBrowser) setShowSectionLib(false) }}
+            onClick={() => { setShowTemplateBrowser(!showTemplateBrowser); if (!showTemplateBrowser) { setShowSectionLib(false); setShowBlogPanel(false) } }}
             className={`rounded-md p-1.5 transition-colors ${showTemplateBrowser ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
             title="Browse Templates"
             data-testid="toggle-template-browser"
@@ -210,7 +212,7 @@ export function Builder({
           </button>
           {hasContent && (
             <button
-              onClick={() => { setShowSectionLib(!showSectionLib); if (!showSectionLib) setShowTemplateBrowser(false) }}
+              onClick={() => { setShowSectionLib(!showSectionLib); if (!showSectionLib) { setShowTemplateBrowser(false); setShowBlogPanel(false) } }}
               className={`rounded-md p-1.5 transition-colors ${showSectionLib ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
               title="Section Library"
               data-testid="toggle-section-lib"
@@ -218,6 +220,14 @@ export function Builder({
               <LayoutGrid className="h-4 w-4" />
             </button>
           )}
+          <button
+            onClick={() => { setShowBlogPanel(!showBlogPanel); if (!showBlogPanel) { setShowTemplateBrowser(false); setShowSectionLib(false) } }}
+            className={`rounded-md p-1.5 transition-colors ${showBlogPanel ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
+            title="Blog"
+            data-testid="toggle-blog-panel"
+          >
+            <FileText className="h-4 w-4" />
+          </button>
           {published && (
             <a href={`https://${host}`} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 text-xs text-brand hover:underline">
               <ExternalLink className="h-3 w-3" /> View live
@@ -250,6 +260,13 @@ export function Builder({
         {hasContent && showSectionLib && !showTemplateBrowser && (
           <div className="w-64 shrink-0 border-r border-border bg-card overflow-y-auto">
             <SectionLibrary onInsert={handleInsertSection} />
+          </div>
+        )}
+
+        {/* Blog panel sidebar */}
+        {showBlogPanel && !showTemplateBrowser && !showSectionLib && (
+          <div className="w-72 shrink-0 border-r border-border bg-card flex flex-col">
+            <BlogPanel host={host} />
           </div>
         )}
 

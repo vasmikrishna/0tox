@@ -1,5 +1,19 @@
 # Completed tasks
 
+- **2026-06-24 — Blog improvements** — #8
+  Three improvements to the blog feature: (1) Public `/blog` and `/blog/[slug]`
+  pages now render using the tenant's own theme (CSS vars `--site-primary`,
+  `--site-accent`, `--site-bg`, `--site-text`) with a full-width primary-color
+  hero banner and cover-image hero on post pages — matching the rest of the public
+  site. (2) Search + pagination added to `/blog` via a new `BlogIndexClient`
+  client wrapper around the existing `PaginatedList` component (9 posts per page,
+  searches title + excerpt). (3) Blog panel surfaced in the website builder: a
+  new `BlogPanel` component (`src/components/build/blog-panel.tsx`) toggleable via
+  the FileText icon in the builder top bar shows the tenant's posts (published vs.
+  drafts), links to create/edit posts in the admin, and links to the live public
+  blog — all without leaving the builder.
+  See [features/blog.md](../features/blog.md).
+
 - **2026-06-24 — Customer accounts + unified "My Businesses" hub** — #7
   Public sites get Sign in/Sign up + a "My account" dropdown. New `/account` hub
   (`(account)` group, outside tenant-isolation) lists every business you belong to
