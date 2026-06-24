@@ -152,7 +152,7 @@ export function UpgradeBanner({ subscribed }: { subscribed: boolean }) {
   return (
     <>
       <div
-        className="flex items-center justify-between gap-3 border-b border-brand/20 bg-brand/5 px-4 py-2"
+        className="flex items-center justify-between gap-3 border-b border-brand/30 bg-gradient-to-r from-brand/10 to-brand/5 px-4 py-3"
         data-testid="upgrade-banner"
       >
         <div className="flex items-center gap-2 text-sm">
@@ -167,6 +167,7 @@ export function UpgradeBanner({ subscribed }: { subscribed: boolean }) {
           variant="brand"
           onClick={() => setOpen(true)}
           data-testid="open-upgrade-dialog"
+          className="shrink-0 font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all"
         >
           Subscribe
         </Button>
@@ -196,14 +197,14 @@ export function UpgradeBanner({ subscribed }: { subscribed: boolean }) {
                 onClick={() => handleSubscribe(p.key)}
                 disabled={busy !== null}
                 data-testid={`subscribe-${p.key}`}
-                className={`relative flex flex-col items-start rounded-lg border p-4 text-left transition-colors disabled:opacity-60 ${
+                className={`relative flex flex-col items-start rounded-lg border p-4 text-left transition-all disabled:opacity-60 ${
                   p.highlight
-                    ? "border-brand bg-brand/5 hover:bg-brand/10"
-                    : "border-border hover:border-brand/50"
+                    ? "border-brand bg-gradient-to-br from-brand/15 to-brand/5 shadow-md hover:shadow-lg hover:scale-105 hover:border-brand/80"
+                    : "border-border bg-card hover:border-brand/50 hover:shadow-sm"
                 }`}
               >
                 {p.highlight && (
-                  <span className="absolute right-3 top-3 rounded-full bg-brand px-2 py-0.5 text-[10px] font-semibold text-white">
+                  <span className="absolute right-3 top-3 rounded-full bg-brand px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
                     BEST VALUE
                   </span>
                 )}
@@ -213,7 +214,7 @@ export function UpgradeBanner({ subscribed }: { subscribed: boolean }) {
                   <span className="text-sm font-normal text-muted-foreground">{p.per}</span>
                 </span>
                 <span className="mt-1 text-xs text-muted-foreground">{p.blurb}</span>
-                <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-brand">
+                <span className={`mt-3 inline-flex items-center gap-1.5 text-sm font-medium ${p.highlight ? "text-brand font-semibold" : "text-brand"}`}>
                   {busy === p.key ? (
                     <>
                       <Loader2 className="h-3.5 w-3.5 animate-spin" /> Starting…
