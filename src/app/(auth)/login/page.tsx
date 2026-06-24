@@ -133,10 +133,8 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError("")
-    // phone is captured in the form but the current backend login flow is
-    // email + password only. We include it in the payload so that a future
-    // backend update can consume it without any frontend changes; the API
-    // silently ignores unknown fields today.
+    // Login is email + password; the optional phone is sent alongside and the
+    // API stores it on the matched user record (issue #9, migration 017).
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

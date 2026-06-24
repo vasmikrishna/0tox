@@ -19,7 +19,7 @@ signed JWT cookie scoped to the parent domain in production.
 |-------|------|----------|-------|
 | Email | `email` | Yes | Identifies the user across tenants |
 | Password | `password` / `text` | Yes | Show/hide toggle (eye icon button, `data-testid="login-password-toggle"`) |
-| Phone number | `tel` | No | Optional; passed through to the API payload for future use |
+| Phone number | `tel` | No | Optional; stored on the user record on login (collect & store only — not a login method) |
 
 ## Show/hide password toggle
 
@@ -33,15 +33,17 @@ The same toggle is present on the `/start` registration form
 ## Phone number field
 
 The phone field is **optional** and rendered below the password field. It is
-included in the `POST /api/auth/login` JSON payload when non-empty. The current
-backend (`src/app/api/auth/login/route.ts`) authenticates by email + password
-only and ignores extra fields — this is intentional: the field is future-ready
-(e.g. OTP login, SMS notifications) without breaking existing flows.
+included in the `POST /api/auth/login` JSON payload when non-empty.
 
-**Decision:** We chose not to add phone to the backend validation in this PR
-because: (a) the `users` table does not currently have a `phone` column,
-(b) adding a column requires a migration that should be scoped to a dedicated
-issue, and (c) the email-first auth flow is stable and must not regress.
+**Behaviour (collect & store only):** login still authenticates by email +
+password. Once credentials check out, the route persists the phone onto the
+matched user record(s) — on the tenant subdomain path it updates that single
+user; on the main-domain path it updates every account the password matched
+(the same person across their workspaces). It is **not** a login method.
+
+Migration `017_user_phone.sql` adds the `phone text` column to `public.users`
+(no new grants needed — existing table grants cover the column). A future OTP /
+SMS feature can build on this column without further frontend changes.
 
 ## data-testid catalogue
 
