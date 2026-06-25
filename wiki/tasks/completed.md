@@ -1,5 +1,12 @@
 # Completed tasks
 
+- **2026-06-25 — Onboarding: collect business mobile number** — #11
+  Added a required Mobile number field (`data-testid="start-phone"`, type tel) to
+  step 2 of the `/start` signup flow. `/api/onboarding/create` now requires
+  `phone` and persists it onto the owner user (`users.phone`, migration 017) and
+  the tenant (`tenants.contact_phone`, new migration `018_tenant_contact_phone.sql`,
+  mirroring the existing `contact_email`). No new type errors (`tsc --noEmit`
+  clean). See [features/auth-login.md](../features/auth-login.md).
 - **2026-06-24 — Login page: show/hide password + phone number field** — #9
   Added eye-icon show/hide password toggle (`data-testid="login-password-toggle"`)
   inside the password field on `/login`. Also added an optional phone number field
