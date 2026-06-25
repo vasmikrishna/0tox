@@ -20,9 +20,13 @@ export async function POST(req: Request) {
   const name = String(body.name ?? "").trim()
   const email = String(body.email ?? "").trim().toLowerCase()
   const password = String(body.password ?? "")
+  // Issue #11: mobile is a required contact field for the business. Stored on
+  // the owner user (users.phone) and the tenant (tenants.contact_phone).
+  const phone = String(body.phone ?? "").trim()
 
   if (!businessName) return NextResponse.json({ error: "Business name is required" }, { status: 400 })
   if (!name || !email || !password) return NextResponse.json({ error: "Name, email, and password are required" }, { status: 400 })
+  if (!phone) return NextResponse.json({ error: "Mobile number is required" }, { status: 400 })
   if (password.length < 8) return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 })
 
   const format = validateSlug(slug)
@@ -49,6 +53,7 @@ export async function POST(req: Request) {
       status: "active",
       onboarding_complete: false,
       contact_email: email,
+      contact_phone: phone,
       settings: { business: { name: businessName } },
     })
     .select("id")
@@ -71,7 +76,7 @@ export async function POST(req: Request) {
     const password_hash = await bcrypt.hash(password, 12)
     const { data: user, error: uErr } = await (supabase as any)
       .from("users")
-      .insert({ name, email, password_hash, role: "admin", tenant_id: tenant.id, status: "active" })
+      .insert({ name, email, phone, password_hash, role: "admin", tenant_id: tenant.id, status: "active" })
       .select("id, email, name, role, tenant_id")
       .single()
 

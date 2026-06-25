@@ -28,6 +28,7 @@ export default function StartPage() {
   // Step 2 — account
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
@@ -74,7 +75,7 @@ export default function StartPage() {
     const res = await fetch("/api/onboarding/create", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ businessName, slug, name, email, password }),
+      body: JSON.stringify({ businessName, slug, name, email, phone, password }),
     })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) {
@@ -185,6 +186,10 @@ export default function StartPage() {
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" data-testid="start-email" type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Mobile number</Label>
+              <Input id="phone" data-testid="start-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="+91 98765 43210" value={phone} onChange={e => setPhone(e.target.value)} required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
