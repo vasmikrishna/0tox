@@ -3,7 +3,10 @@ import type { SiteSettings } from "@/lib/site-settings"
 
 const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN ?? "site9.in"
 
-export function getCanonicalOrigin(tenant: Tenant | null, slug: string): string {
+export function getCanonicalOrigin(
+  tenant: { custom_domain?: string | null; domain_verified?: boolean | null } | null,
+  slug: string,
+): string {
   if (tenant?.custom_domain && tenant.domain_verified) {
     return `https://${tenant.custom_domain}`
   }
