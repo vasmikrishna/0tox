@@ -60,3 +60,27 @@ export async function requireTenantId(): Promise<string> {
   if (!tenant) throw new Error("Tenant not found")
   return tenant.id
 }
+
+/** Minimal tenant fields needed to build a sitemap-index entry. */
+export interface IndexableTenant {
+  slug: string
+  custom_domain: string | null
+  domain_verified: boolean | null
+  updated_at: string | null
+}
+
+/**
+ * List tenants that should appear in the public sitemap index: active and
+ * fully onboarded. Used by the apex `/sitemap-index.xml` route so new tenants
+ * are discovered by search engines automatically, with no code change.
+ */
+export async function listIndexableTenants(): Promise<IndexableTenant[]> {
+  const supabase = createClient()
+  const { data } = await (supabase as any)
+    .from("tenants")
+    .select("slug, custom_domain, domain_verified, updated_at")
+    .eq("status", "active")
+    .eq("onboarding_complete", true)
+    .order("slug", { ascending: true })
+  return (data ?? []) as IndexableTenant[]
+}

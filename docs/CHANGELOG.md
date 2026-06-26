@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added — Auto-discover tenant subdomains via a sitemap index (#12)
+- New apex route `app/sitemap-index.xml/route.ts` emits a `<sitemapindex>` that lists the main site's `sitemap.xml` plus one child sitemap per **active, onboarded** tenant — using each tenant's verified custom domain when present, else `{slug}.site9.in`. New tenants appear automatically with no code change or redeploy (revalidates hourly).
+- `lib/tenant.ts`: added `listIndexableTenants()` (`status='active'` AND `onboarding_complete=true`) and the `IndexableTenant` type.
+- `lib/sitemap-index.ts`: pure, unit-tested builders (`buildIndexEntries`, `buildSitemapIndexXml`) with XML escaping; the route stays thin.
+- `app/robots.ts`: the apex now advertises `Sitemap: /sitemap-index.xml` (so search engines auto-discover the index); tenant subdomains keep advertising their own `sitemap.xml`.
+- `lib/seo.ts`: widened `getCanonicalOrigin`'s param to a structural type so it accepts minimal tenant rows (backward compatible).
+- Existing per-tenant `app/sitemap.ts` is unchanged. Why: Google does not auto-discover subdomains behind a wildcard DNS — they're only crawled if linked or listed in a sitemap.
+
 ### Added — Customer accounts + unified "My Businesses" hub (#7)
 - **Public entry points.** Each tenant's public site header now shows **Sign in / Sign up** when logged out, and a **My account** dropdown (→ My businesses, My dashboard, Sign out) when logged in. `(public)/layout.tsx` reads the shared session and passes it to `components/site/header.tsx`.
 - **Unified hub** at `/account` (new `(account)` route group). Lists every tenant the person belongs to, split into **Businesses you own** (role `admin`), **You're a customer of** (role `client`), and **Businesses you work with** (role `employee`). Each card's **Enter** switches the session to that tenant (`/api/auth/switch-workspace`) and navigates to its subdomain. Plus a "Create a new website" CTA (→ `/start`). The route lives outside the `(client)/(admin)/(employee)` groups so it is **not** subject to subdomain tenant-isolation; the page enforces auth itself (no middleware change).

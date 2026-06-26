@@ -1,5 +1,14 @@
 # Completed tasks
 
+- **2026-06-26 — Auto-discover tenant subdomains via a sitemap index** — #12
+  Added apex `app/sitemap-index.xml/route.ts` emitting a `<sitemapindex>` of the
+  main site plus every active, onboarded tenant (verified custom domain, else
+  `{slug}.site9.in`). New `listIndexableTenants()` in `lib/tenant.ts`; pure,
+  unit-tested builders in `lib/sitemap-index.ts`; apex `robots.ts` now points
+  `Sitemap:` at `/sitemap-index.xml`. New tenants are discovered automatically —
+  no redeploy. 8 new unit tests, `tsc --noEmit` clean. See
+  [features/seo-sitemaps.md](../features/seo-sitemaps.md).
+
 - **2026-06-25 — Onboarding: collect business mobile number** — #11
   Added a required Mobile number field (`data-testid="start-phone"`, type tel) to
   step 2 of the `/start` signup flow. `/api/onboarding/create` now requires
